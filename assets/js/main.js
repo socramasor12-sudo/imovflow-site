@@ -1,152 +1,106 @@
-/* Marcos Rosa Corretor - main.js */
-(function () {
-    'use strict';
+// ═══════════════════════════════════════
+// MARCOS ROSA — JS Principal
+// CRECI-GO 35088-F
+// ═══════════════════════════════════════
 
-    /* =========================================================
-       Header scroll effect
-    ========================================================= */
-    var header = document.getElementById('site-header');
+document.addEventListener('DOMContentLoaded', function () {
 
-    function onScroll() {
-        if (window.scrollY > 80) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
-    }
+  // ─── HEADER SCROLL ───────────────────
+  const header = document.getElementById('mr-header');
+  window.addEventListener('scroll', () => {
+    header?.classList.toggle('scrolled', window.scrollY > 50);
+  });
 
-    if (header) {
-        window.addEventListener('scroll', onScroll, { passive: true });
-        onScroll();
-    }
+  // ─── MENU MOBILE ─────────────────────
+  const toggle = document.getElementById('mr-menu-toggle');
+  const nav    = document.querySelector('.mr-nav');
+  toggle?.addEventListener('click', () => {
+    nav?.classList.toggle('open');
+  });
 
-    /* =========================================================
-       Mobile menu toggle
-    ========================================================= */
-    var menuToggle = document.querySelector('.menu-toggle');
-    var navList    = document.querySelector('.nav-list');
-
-    if (menuToggle && navList) {
-        menuToggle.addEventListener('click', function () {
-            var isOpen = navList.classList.toggle('is-open');
-            menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-            menuToggle.classList.toggle('is-active', isOpen);
-        });
-
-        // Close menu when a nav link is clicked
-        navList.querySelectorAll('a').forEach(function (link) {
-            link.addEventListener('click', function () {
-                navList.classList.remove('is-open');
-                menuToggle.setAttribute('aria-expanded', 'false');
-                menuToggle.classList.remove('is-active');
-            });
-        });
-    }
-
-    /* =========================================================
-       Smooth scroll for anchor links
-    ========================================================= */
-    document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
-        anchor.addEventListener('click', function (e) {
-            var targetId = this.getAttribute('href').slice(1);
-            var target   = document.getElementById(targetId);
-
-            if (target) {
-                e.preventDefault();
-                var headerHeight = header ? header.offsetHeight : 0;
-                var top = target.getBoundingClientRect().top + window.scrollY - headerHeight;
-
-                window.scrollTo({ top: top, behavior: 'smooth' });
-            }
-        });
-    });
-
-    /* =========================================================
-       Busca (search form)
-    ========================================================= */
-    window.buscar = function (e) {
+  // ─── SMOOTH SCROLL PARA ÂNCORAS ──────
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
         e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        nav?.classList.remove('open');
+      }
+    });
+  });
 
-        var finalidade = document.getElementById('finalidade').value;
-        var tipo       = document.getElementById('tipo').value;
-        var bairro     = document.getElementById('bairro').value.trim();
+});
 
-        var params = new URLSearchParams();
-        if (finalidade) params.set('finalidade', finalidade);
-        if (tipo)       params.set('tipo', tipo);
-        if (bairro)     params.set('bairro', bairro);
+// ─── BUSCA ─────────────────────────────
+function executarBusca() {
+  const finalidade = document.getElementById('busca-finalidade')?.value || '';
+  const tipo       = document.getElementById('busca-tipo')?.value || '';
+  const bairro     = document.getElementById('busca-bairro')?.value || '';
 
-        var url = '/imoveis/';
-        if (params.toString()) {
-            url += '?' + params.toString();
-        }
+  const params = new URLSearchParams();
+  if (finalidade) params.set('finalidade', finalidade);
+  if (tipo)       params.set('tipo', tipo);
+  if (bairro)     params.set('bairro', bairro);
 
-        window.location.href = url;
-    };
+  window.location.href = '/imoveis/?' + params.toString();
+}
 
-    /* =========================================================
-       Captação form – AJAX submit
-    ========================================================= */
-    var captacaoForm     = document.getElementById('captacao-form');
-    var captacaoFeedback = document.getElementById('captacao-feedback');
+// ─── CAPTAÇÃO FORM ─────────────────────
+function enviarCaptacao() {
+  const nome   = document.getElementById('cap-nome')?.value?.trim();
+  const wpp    = document.getElementById('cap-wpp')?.value?.trim();
+  const tipo   = document.getElementById('cap-tipo')?.value;
+  const bairro = document.getElementById('cap-bairro')?.value?.trim();
+  const valor  = document.getElementById('cap-valor')?.value?.trim();
+  const msgDiv = document.getElementById('mr-captacao-msg');
+  const btn    = document.querySelector('.mr-btn-captacao');
 
-    window.enviarCaptacao = function (formData) {
-        if (!window.marcosRosa || !window.marcosRosa.ajaxurl) {
-            showFeedback('error', 'Erro de configuração. Por favor, tente novamente.');
-            return;
-        }
+  if (!nome || !wpp) {
+    showMsg(msgDiv, 'Preencha seu nome e WhatsApp.', 'err');
+    return;
+  }
 
-        formData.append('action', 'captacao');
-        formData.append('nonce',  window.marcosRosa.nonce);
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
 
-        fetch(window.marcosRosa.ajaxurl, {
-            method: 'POST',
-            body:   formData,
-        })
-            .then(function (res) {
-                if (!res.ok) throw new Error('Erro de rede');
-                return res.json();
-            })
-            .then(function (data) {
-                if (data.success) {
-                    showFeedback('success', data.data.message || 'Solicitação enviada com sucesso!');
-                    captacaoForm.reset();
-                } else {
-                    showFeedback('error', data.data.message || 'Erro ao enviar. Tente novamente.');
-                }
-            })
-            .catch(function () {
-                showFeedback('error', 'Erro de conexão. Verifique sua internet e tente novamente.');
-            });
-    };
+  const data = new FormData();
+  data.append('action', 'marcos_rosa_captacao');
+  data.append('nonce',  marcosRosa.nonce);
+  data.append('nome',   nome);
+  data.append('whatsapp', wpp);
+  data.append('tipo',   tipo);
+  data.append('bairro', bairro);
+  data.append('valor',  valor);
 
-    if (captacaoForm) {
-        captacaoForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            var submitBtn = captacaoForm.querySelector('[type="submit"]');
-            if (submitBtn) {
-                submitBtn.disabled    = true;
-                submitBtn.textContent = 'Enviando...';
-            }
-
-            var formData = new FormData(captacaoForm);
-            enviarCaptacao(formData);
-
-            if (submitBtn) {
-                setTimeout(function () {
-                    submitBtn.disabled    = false;
-                    submitBtn.textContent = 'Solicitar Avaliação Gratuita';
-                }, 3000);
-            }
+  fetch(marcosRosa.ajaxurl, { method: 'POST', body: data })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        showMsg(msgDiv, res.data.msg, 'ok');
+        // Abre WhatsApp do proprietário automaticamente
+        setTimeout(() => window.open(res.data.wpp_link, '_blank'), 1500);
+        // Limpa form
+        ['cap-nome','cap-wpp','cap-bairro','cap-valor'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
         });
-    }
+        document.getElementById('cap-tipo').value = '';
+      } else {
+        showMsg(msgDiv, res.data?.msg || 'Erro ao enviar.', 'err');
+      }
+    })
+    .catch(() => showMsg(msgDiv, 'Erro de conexão. Tente pelo WhatsApp.', 'err'))
+    .finally(() => {
+      btn.textContent = '📲 Quero Anunciar Meu Imóvel';
+      btn.disabled = false;
+    });
+}
 
-    function showFeedback(type, message) {
-        if (!captacaoFeedback) return;
-        captacaoFeedback.className  = 'form-feedback form-feedback--' + type;
-        captacaoFeedback.textContent = message;
-        captacaoFeedback.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-}());
+function showMsg(el, msg, tipo) {
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = tipo === 'ok' ? 'mr-captacao-msg-ok' : 'mr-captacao-msg-err';
+  el.textContent = msg;
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
+}
