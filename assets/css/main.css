@@ -20,7 +20,8 @@
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(201,168,76,0.2);
   }
-  .logo-header img { height: 64px; width: auto; display: block; }
+  .logo-header img,
+  .mr-logo img { max-height: 70px; width: auto; display: block; }
   nav { display: flex; align-items: center; gap: 40px; }
   nav a {
     text-decoration: none; font-size: 0.7rem; font-weight: 300;
@@ -28,14 +29,16 @@
     transition: all 0.3s; text-transform: uppercase;
   }
   nav a:hover { color: var(--dourado); opacity: 1; }
-  .btn-wpp-header {
+  .btn-wpp-header,
+  .mr-btn-wpp {
     display: flex; align-items: center; gap: 8px;
     background: var(--dourado); color: var(--azul);
     padding: 10px 22px; font-size: 0.65rem; font-weight: 600;
     letter-spacing: 2px; text-transform: uppercase;
     text-decoration: none; transition: all 0.3s;
   }
-  .btn-wpp-header:hover { background: var(--dourado-claro); }
+  .btn-wpp-header:hover,
+  .mr-btn-wpp:hover { background: var(--dourado-claro); }
 
   /* HERO */
   .hero {
@@ -347,4 +350,95 @@
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(30px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  /* ═══════════════════════════════════════
+     RESPONSIVIDADE — HEADER MOBILE
+  ═══════════════════════════════════════ */
+
+  /* MENU TOGGLE — oculto no desktop */
+  .mr-menu-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    z-index: 200;
+  }
+  .mr-menu-toggle span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--branco);
+    border-radius: 2px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    transform-origin: center;
+  }
+  /* Animação X quando aberto */
+  .mr-menu-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .mr-menu-toggle.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  .mr-menu-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* ─── TABLET ───────────────────────── */
+  @media (max-width: 1024px) {
+    header {
+      padding: 12px 32px;
+    }
+    .mr-nav {
+      gap: 24px;
+    }
+  }
+
+  /* ─── MOBILE ───────────────────────── */
+  @media (max-width: 768px) {
+    header {
+      padding: 12px 20px;
+      position: fixed;
+    }
+
+    /* Mostrar botão hamburguer */
+    .mr-menu-toggle {
+      display: flex;
+    }
+
+    /* Esconder nav e botão WhatsApp por padrão no mobile */
+    .mr-nav,
+    .mr-btn-wpp {
+      display: none;
+    }
+
+    /* Menu mobile aberto: nav em coluna sobre o header */
+    .mr-nav.open {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+      position: fixed;
+      top: 70px;
+      left: 0;
+      right: 0;
+      background: rgba(26, 39, 68, 0.98);
+      backdrop-filter: blur(16px);
+      padding: 24px 20px 32px;
+      border-bottom: 1px solid rgba(201,168,76,0.3);
+      z-index: 99;
+    }
+
+    .mr-nav.open a {
+      padding: 14px 0;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      width: 100%;
+      border-bottom: 1px solid rgba(201,168,76,0.1);
+      opacity: 0.9;
+    }
+
+    .mr-nav.open a:last-child {
+      border-bottom: none;
+    }
   }

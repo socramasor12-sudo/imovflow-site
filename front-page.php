@@ -206,7 +206,7 @@
     </div>
     <div><div class="footer-col-titulo">Imóveis</div><ul class="footer-links"><li><a href="#">Lançamentos</a></li><li><a href="#">Revendas</a></li><li><a href="#">Apartamentos</a></li><li><a href="#">Casas</a></li><li><a href="#">Terrenos</a></li></ul></div>
     <div><div class="footer-col-titulo">Links</div><ul class="footer-links"><li><a href="#">Início</a></li><li><a href="#">Sobre Marcos Rosa</a></li><li><a href="#">Venda Conosco</a></li><li><a href="#">Contato</a></li></ul></div>
-    <div><div class="footer-col-titulo">Contato</div><ul class="footer-links"><li><a href="#">📱 (62) 98114-8448</a></li><li><a href="#">📍 Anápolis/GO</a></li><li><a href="#">💬 WhatsApp</a></li><li><a href="#">📸 Instagram</a></li></ul></div>
+    <div><div class="footer-col-titulo">Contato</div><ul class="footer-links"><li><a href="https://wa.me/5562981148448">📱 (62) 98114-8448</a></li><li><span>📍 Anápolis/GO</span></li><li><a href="https://wa.me/5562981148448">💬 WhatsApp</a></li><li><a href="#">📸 Instagram</a></li></ul></div>
   </div>
   <div class="linha-decorativa"></div>
   <div class="footer-bottom">

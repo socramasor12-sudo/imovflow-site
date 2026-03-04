@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const nav    = document.querySelector('.mr-nav');
   toggle?.addEventListener('click', () => {
     nav?.classList.toggle('open');
+    toggle.classList.toggle('open');
   });
 
   // ─── SMOOTH SCROLL PARA ÂNCORAS ──────

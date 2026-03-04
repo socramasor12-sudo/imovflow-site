@@ -102,10 +102,45 @@ function marcos_rosa_cpt() {
 }
 add_action('init', 'marcos_rosa_cpt');
 
-// ─── REMOVE IMOVFLOW BRANDING ───────────────────────────────
+// ─── IDENTIDADE Marcos Rosa — Corretor Imobiliário ──────────
 remove_action('wp_head', 'wp_generator');
 
 // ─── TITLE TAG ──────────────────────────────────────────────
-function marcos_rosa_wp_title($title) {
-    return $title . ' | Marcos Rosa — Corretor Imobiliário CRECI-GO 35088-F';
+function marcos_rosa_document_title( $parts ) {
+    if ( is_front_page() ) {
+        $parts['title'] = 'Corretor de Imóveis em Anápolis/GO';
+    }
+    $parts['tagline'] = 'Marcos Rosa — Corretor Imobiliário | CRECI-GO 35088-F';
+    return $parts;
 }
+add_filter( 'document_title_parts', 'marcos_rosa_document_title' );
+
+// ─── SEO META TAGS ──────────────────────────────────────────
+function marcos_rosa_seo_meta() {
+    $descricao = 'Marcos Rosa — Corretor de Imóveis em Anápolis/GO. CRECI-GO 35088-F. Especialista em lançamentos e revendas residenciais. Atendimento via WhatsApp (62) 98114-8448.';
+    $keywords  = 'corretor de imóveis Anápolis, imóveis Anápolis GO, lançamentos imobiliários Anápolis, Marcos Rosa Corretor, CRECI-GO 35088-F, comprar imóvel Anápolis, revendas Anápolis';
+    $titulo    = is_front_page()
+        ? 'Corretor de Imóveis em Anápolis/GO | Marcos Rosa — CRECI-GO 35088-F'
+        : get_the_title() . ' | Marcos Rosa — Corretor de Imóveis em Anápolis';
+    ?>
+<meta name="description" content="<?php echo esc_attr($descricao); ?>">
+<meta name="keywords"    content="<?php echo esc_attr($keywords); ?>">
+<meta name="author"      content="Marcos Rosa — Corretor Imobiliário | CRECI-GO 35088-F">
+<meta name="robots"      content="index, follow">
+<!-- Open Graph -->
+<meta property="og:type"        content="website">
+<meta property="og:locale"      content="pt_BR">
+<meta property="og:site_name"   content="Marcos Rosa — Corretor Imobiliário">
+<meta property="og:title"       content="<?php echo esc_attr($titulo); ?>">
+<meta property="og:description" content="<?php echo esc_attr($descricao); ?>">
+<meta property="og:url"         content="<?php echo esc_url(home_url('/')); ?>">
+<!-- Twitter Card -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="<?php echo esc_attr($titulo); ?>">
+<meta name="twitter:description" content="<?php echo esc_attr($descricao); ?>">
+<!-- Contato estruturado -->
+<meta name="contact:whatsapp"   content="+55 (62) 98114-8448">
+<meta name="contact:creci"      content="CRECI-GO 35088-F">
+    <?php
+}
+add_action( 'wp_head', 'marcos_rosa_seo_meta', 1 );

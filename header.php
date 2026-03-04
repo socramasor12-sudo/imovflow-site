@@ -4,6 +4,25 @@
 <meta charset="<?php bloginfo('charset'); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <?php wp_head(); ?>
+<!-- Schema.org: Marcos Rosa — Corretor Imobiliário -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "RealEstateAgent",
+  "name": "Marcos Rosa — Corretor Imobiliário",
+  "description": "Corretor de Imóveis em Anápolis/GO. CRECI-GO 35088-F. Especialista em lançamentos e revendas residenciais.",
+  "url": "<?php echo esc_url(home_url('/')); ?>",
+  "telephone": "+55 62 98114-8448",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Anápolis",
+    "addressRegion": "GO",
+    "addressCountry": "BR"
+  },
+  "identifier": "CRECI-GO 35088-F",
+  "sameAs": []
+}
+</script>
 </head>
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
