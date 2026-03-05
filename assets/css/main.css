@@ -347,4 +347,21 @@
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(30px); }
     to { opacity: 1; transform: translateY(0); }
-  }
+  }.hero-direita, .hero-img-bg, .hero-logo-grande, .hero-overlay {  }
+.hero-direita, .hero-img-bg, .hero-logo-grande, .hero-overlay { pointer-events: none; }
+
+/* FIX: Hero layout */
+.hero { position: relative; }
+.hero-direita {
+  position: absolute !important;
+  right: 0; top: 0; bottom: 0;
+  width: 50%;
+  z-index: 0;
+  pointer-events: none;
+}
+.hero-esquerda {
+  position: relative;
+  z-index: 3;
+  width: 50%;
+}
+.hero-stats { z-index: 3 !important; }
