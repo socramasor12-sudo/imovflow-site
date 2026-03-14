@@ -102,6 +102,22 @@ function marcos_rosa_cpt() {
 }
 add_action('init', 'marcos_rosa_cpt');
 
+// ─── CPT: IMOVEL ────────────────────────────────────────────
+function marcos_rosa_cpt_imovel() {
+    register_post_type('imovel', [
+        'label'           => 'Imóveis',
+        'public'          => true,
+        'show_ui'         => true,
+        'show_in_menu'    => true,
+        'menu_icon'       => 'dashicons-admin-home',
+        'rewrite'         => ['slug' => 'imoveis', 'with_front' => false],
+        'has_archive'     => true,
+        'supports'        => ['title', 'thumbnail'],
+        'capability_type' => 'post',
+    ]);
+}
+add_action('init', 'marcos_rosa_cpt_imovel');
+
 // ─── IDENTIDADE Marcos Rosa — Corretor Imobiliário ──────────
 remove_action('wp_head', 'wp_generator');
 
