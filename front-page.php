@@ -1,6 +1,5 @@
 <?php get_header(); ?>
 
-<a href="https://wa.me/5562981148448" class="wpp-float" target="_blank">💬</a>
 
 <!-- HEADER -->
 <header>
@@ -69,38 +68,71 @@
 </section>
 
 <!-- LANÇAMENTOS -->
+<?php
+$imoveis = new WP_Query([
+    'post_type'      => 'imovel',
+    'posts_per_page' => 3,
+    'post_status'    => 'publish',
+]);
+if ($imoveis->have_posts()) : ?>
 <section class="imoveis-section" id="imoveis">
   <div class="section-header">
     <div>
       <div class="section-tag">Novidades</div>
       <h2 class="section-titulo">Lançamentos em<br><span>Anápolis/GO</span></h2>
     </div>
-    <a href="#" class="ver-todos">Ver todos</a>
+    <a href="<?php echo esc_url(get_post_type_archive_link('imovel')); ?>" class="ver-todos">Ver todos</a>
   </div>
   <div class="imoveis-grid">
+    <?php while ($imoveis->have_posts()) : $imoveis->the_post();
+      $tipo      = get_post_meta(get_the_ID(), '_imovel_tipo',      true);
+      $bairro    = get_post_meta(get_the_ID(), '_imovel_bairro',    true);
+      $preco     = get_post_meta(get_the_ID(), '_imovel_preco',     true);
+      $quartos   = get_post_meta(get_the_ID(), '_imovel_quartos',   true);
+      $banheiros = get_post_meta(get_the_ID(), '_imovel_banheiros', true);
+      $vagas     = get_post_meta(get_the_ID(), '_imovel_vagas',     true);
+      $badge     = get_post_meta(get_the_ID(), '_imovel_badge',     true);
+    ?>
+    <?php // Nota: estrutura 3-blocos (imovel-info + imovel-rodape) intencional — corresponde ao CSS existente. ?>
     <div class="imovel-card">
-      <div class="imovel-img"><div class="imovel-img-placeholder">MR</div><div class="imovel-badge">Lançamento</div></div>
-      <div class="imovel-info"><div class="imovel-tipo">Edifício Residencial</div><div class="imovel-nome">Residencial Premium</div><div class="imovel-local">📍 Jundiaí, Anápolis/GO</div></div>
-      <div class="imovel-rodape"><div class="imovel-preco">R$ 350.000 <span>a partir de</span></div><div class="imovel-detalhes"><div class="detalhe"><div class="detalhe-num">3</div><div class="detalhe-label">Qtos</div></div><div class="detalhe"><div class="detalhe-num">2</div><div class="detalhe-label">Banh</div></div><div class="detalhe"><div class="detalhe-num">2</div><div class="detalhe-label">Vagas</div></div></div></div>
+      <div class="imovel-img">
+        <?php if (has_post_thumbnail()) :
+          the_post_thumbnail('medium', ['class' => 'imovel-thumb']);
+        else : ?>
+          <div class="imovel-img-placeholder">MR</div>
+        <?php endif; ?>
+        <?php if ($badge) : ?>
+          <div class="imovel-badge"><?php echo esc_html($badge); ?></div>
+        <?php endif; ?>
+      </div>
+      <div class="imovel-info">
+        <div class="imovel-tipo"><?php echo esc_html($tipo); ?></div>
+        <div class="imovel-nome"><?php the_title(); ?></div>
+        <?php if ($bairro) : ?>
+          <div class="imovel-local">📍 <?php echo esc_html($bairro); ?>, Anápolis/GO</div>
+        <?php endif; ?>
+      </div>
+      <div class="imovel-rodape">
+        <?php if ($preco) : ?>
+          <div class="imovel-preco">R$ <?php echo esc_html($preco); ?> <span>a partir de</span></div>
+        <?php endif; ?>
+        <?php if ($quartos || $banheiros || $vagas) : ?>
+        <div class="imovel-detalhes">
+          <?php if ($quartos)   echo '<div class="detalhe"><div class="detalhe-num">' . absint($quartos)   . '</div><div class="detalhe-label">Qtos</div></div>'; ?>
+          <?php if ($banheiros) echo '<div class="detalhe"><div class="detalhe-num">' . absint($banheiros) . '</div><div class="detalhe-label">Banh</div></div>'; ?>
+          <?php if ($vagas)     echo '<div class="detalhe"><div class="detalhe-num">' . absint($vagas)     . '</div><div class="detalhe-label">Vagas</div></div>'; ?>
+        </div>
+        <?php endif; ?>
+      </div>
     </div>
-    <div class="imovel-card">
-      <div class="imovel-img"><div class="imovel-img-placeholder">MR</div><div class="imovel-badge">Pronto p/ Morar</div></div>
-      <div class="imovel-info"><div class="imovel-tipo">Apartamento</div><div class="imovel-nome">Condomínio Exclusive</div><div class="imovel-local">📍 Maracanã, Anápolis/GO</div></div>
-      <div class="imovel-rodape"><div class="imovel-preco">R$ 280.000 <span>a partir de</span></div><div class="imovel-detalhes"><div class="detalhe"><div class="detalhe-num">2</div><div class="detalhe-label">Qtos</div></div><div class="detalhe"><div class="detalhe-num">1</div><div class="detalhe-label">Banh</div></div><div class="detalhe"><div class="detalhe-num">1</div><div class="detalhe-label">Vaga</div></div></div></div>
-    </div>
-    <div class="imovel-card">
-      <div class="imovel-img"><div class="imovel-img-placeholder">MR</div><div class="imovel-badge">Últimas Unidades</div></div>
-      <div class="imovel-info"><div class="imovel-tipo">Edifício Residencial</div><div class="imovel-nome">Residencial Grand Vie</div><div class="imovel-local">📍 Cidade Universitária, Anápolis/GO</div></div>
-      <div class="imovel-rodape"><div class="imovel-preco">Consulte <span>valor</span></div><div class="imovel-detalhes"><div class="detalhe"><div class="detalhe-num">3</div><div class="detalhe-label">Qtos</div></div><div class="detalhe"><div class="detalhe-num">2</div><div class="detalhe-label">Banh</div></div><div class="detalhe"><div class="detalhe-num">2</div><div class="detalhe-label">Vagas</div></div></div></div>
-    </div>
+    <?php endwhile; wp_reset_postdata(); ?>
   </div>
 </section>
+<?php endif; ?>
 
 <!-- SOBRE -->
 <section class="sobre-section" id="sobre">
-  <div class="sobre-foto">
-    <img src="<?php echo get_template_directory_uri(); ?>/assets/img/marcos-rosa.jpg" alt="Marcos Rosa — Corretor Imobiliário">
-  </div>
+
   <div class="sobre-conteudo">
     <div class="section-tag" style="color:rgba(201,168,76,0.6)">Conheça</div>
     <h2 class="sobre-titulo">Marcos <span>Rosa</span></h2>
@@ -155,35 +187,38 @@
     <div class="captacao-form-titulo">Cadastre seu Imóvel</div>
     <div class="captacao-form-sub">Retorno em até 24 horas</div>
 
-    <div class="form-campo">
-      <label>Seu Nome</label>
-      <input type="text" placeholder="Nome completo">
-    </div>
-    <div class="form-grid">
+    <form id="form-captacao" class="mr-form-captacao">
       <div class="form-campo">
-        <label>WhatsApp</label>
-        <input type="text" placeholder="(62) 9 ....">
+        <label>Seu Nome</label>
+        <input type="text" name="nome" required placeholder="Nome completo">
+      </div>
+      <div class="form-grid">
+        <div class="form-campo">
+          <label>WhatsApp</label>
+          <input type="text" name="whatsapp" required placeholder="(62) 9 ....">
+        </div>
+        <div class="form-campo">
+          <label>Tipo do Imóvel</label>
+          <select name="tipo" required>
+            <option value="">Selecione</option>
+            <option>Apartamento</option>
+            <option>Casa</option>
+            <option>Terreno</option>
+            <option>Comercial</option>
+          </select>
+        </div>
       </div>
       <div class="form-campo">
-        <label>Tipo do Imóvel</label>
-        <select>
-          <option value="">Selecione</option>
-          <option>Apartamento</option>
-          <option>Casa</option>
-          <option>Terreno</option>
-          <option>Comercial</option>
-        </select>
+        <label>Bairro / Localização</label>
+        <input type="text" name="localizacao" required placeholder="Ex: Jundiaí, Centro...">
       </div>
-    </div>
-    <div class="form-campo">
-      <label>Bairro / Localização</label>
-      <input type="text" placeholder="Ex: Jundiaí, Centro...">
-    </div>
-    <div class="form-campo">
-      <label>Valor Pretendido (R$)</label>
-      <input type="text" placeholder="Ex: 350.000">
-    </div>
-    <button class="btn-captacao">📲 Quero Anunciar Meu Imóvel</button>
+      <div class="form-campo">
+        <label>Valor Pretendido (R$)</label>
+        <input type="text" name="valor" placeholder="Ex: 350.000">
+      </div>
+      <button type="submit" class="btn-captacao">📲 Quero Anunciar Meu Imóvel</button>
+      <div id="form-message" style="margin-top: 15px; font-size: 0.8rem; display: none;"></div>
+    </form>
   </div>
 </section>
 
@@ -195,28 +230,5 @@
   </div>
   <a href="https://wa.me/5562981148448" class="btn-cta">💬 Falar no WhatsApp</a>
 </section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="footer-grid">
-    <div>
-      <img src="<?php echo get_template_directory_uri(); ?>/assets/img/logo.png" class="footer-logo-img" alt="Marcos Rosa Corretor Imobiliário">
-      <p class="footer-desc">Especialista em lançamentos e revendas em Anápolis/GO. Atendimento personalizado com foco no seu resultado.</p>
-      <div class="footer-creci">CRECI-GO 35088-F</div>
-    </div>
-    <div><div class="footer-col-titulo">Imóveis</div><ul class="footer-links"><li><a href="#">Lançamentos</a></li><li><a href="#">Revendas</a></li><li><a href="#">Apartamentos</a></li><li><a href="#">Casas</a></li><li><a href="#">Terrenos</a></li></ul></div>
-    <div><div class="footer-col-titulo">Links</div><ul class="footer-links"><li><a href="#">Início</a></li><li><a href="#">Sobre Marcos Rosa</a></li><li><a href="#">Venda Conosco</a></li><li><a href="#">Contato</a></li></ul></div>
-    <div><div class="footer-col-titulo">Contato</div><ul class="footer-links"><li><a href="https://wa.me/5562981148448">📱 (62) 98114-8448</a></li><li><span>📍 Anápolis/GO</span></li><li><a href="https://wa.me/5562981148448">💬 WhatsApp</a></li><li><a href="#">📸 Instagram</a></li></ul></div>
-  </div>
-  <div class="linha-decorativa"></div>
-  <div class="footer-bottom">
-    <div class="footer-copy">© 2026 Marcos Rosa · CRECI-GO 35088-F · Todos os direitos reservados</div>
-    <div class="footer-social">
-      <a href="#" class="social-btn">ig</a>
-      <a href="#" class="social-btn">fb</a>
-      <a href="#" class="social-btn">yt</a>
-    </div>
-  </div>
-</footer>
 
 <?php get_footer(); ?>
