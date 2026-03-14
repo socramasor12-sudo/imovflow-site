@@ -48,7 +48,7 @@ function marcos_rosa_captacao() {
     $nome    = sanitize_text_field($_POST['nome'] ?? '');
     $wpp     = sanitize_text_field($_POST['whatsapp'] ?? '');
     $tipo    = sanitize_text_field($_POST['tipo'] ?? '');
-    $bairro  = sanitize_text_field($_POST['bairro'] ?? '');
+    $bairro  = sanitize_text_field($_POST['localizacao'] ?? $_POST['bairro'] ?? '');
     $valor   = sanitize_text_field($_POST['valor'] ?? '');
 
     if (empty($nome) || empty($wpp)) {
@@ -134,6 +134,10 @@ function marcos_rosa_seo_meta() {
 <meta property="og:title"       content="<?php echo esc_attr($titulo); ?>">
 <meta property="og:description" content="<?php echo esc_attr($descricao); ?>">
 <meta property="og:url"         content="<?php echo esc_url(home_url('/')); ?>">
+<meta property="og:image"        content="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/logo.png">
+<meta property="og:image:width"  content="512">
+<meta property="og:image:height" content="512">
+<meta name="twitter:image"       content="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/logo.png">
 <!-- Twitter Card -->
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:title"       content="<?php echo esc_attr($titulo); ?>">
