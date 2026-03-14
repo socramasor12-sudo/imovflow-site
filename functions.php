@@ -236,10 +236,10 @@ function marcos_rosa_seo_meta() {
 <meta property="og:title"       content="<?php echo esc_attr($titulo); ?>">
 <meta property="og:description" content="<?php echo esc_attr($descricao); ?>">
 <meta property="og:url"         content="<?php echo esc_url(home_url('/')); ?>">
-<meta property="og:image"        content="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/logo.png">
+<meta property="og:image"        content="<?php echo esc_url(get_template_directory_uri() . '/assets/img/logo.png'); ?>">
 <meta property="og:image:width"  content="512">
 <meta property="og:image:height" content="512">
-<meta name="twitter:image"       content="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/logo.png">
+<meta name="twitter:image"       content="<?php echo esc_url(get_template_directory_uri() . '/assets/img/logo.png'); ?>">
 <!-- Twitter Card -->
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:title"       content="<?php echo esc_attr($titulo); ?>">
