@@ -254,6 +254,7 @@
   /* FOOTER */
   footer { background: #0d1826; padding: 80px 60px 40px; }
   .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 60px; margin-bottom: 60px; }
+  .mr-footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 60px; margin-bottom: 60px; }
   .footer-logo-img { height: 80px; width: auto; margin-bottom: 16px; }
   .footer-desc { font-size: 0.7rem; font-weight: 300; line-height: 2; color: rgba(248,246,241,0.4); max-width: 280px; }
   .footer-creci {
@@ -468,5 +469,59 @@
 
     .mr-nav.open a:last-child {
       border-bottom: none;
+    }
+
+    /* ─── MOBILE — SEÇÕES ─── */
+    .hero-esquerda {
+      padding: 100px 24px 60px;
+    }
+    .hero-direita {
+      height: 260px;
+    }
+    .hero-stats {
+      gap: 16px;
+      padding: 24px;
+    }
+    .imoveis-grid {
+      grid-template-columns: 1fr;
+    }
+    /* busca-section está display:none mas overrides preparados para ativação futura */
+    .busca-section {
+      padding: 40px 24px;
+    }
+    .busca-form {
+      grid-template-columns: 1fr;
+    }
+    .btn-busca {
+      width: 100%;
+    }
+    .sobre-section {
+      grid-template-columns: 1fr;
+      padding: 60px 24px;
+    }
+    .sobre-foto {
+      min-height: 280px;
+    }
+    .captacao-section {
+      grid-template-columns: 1fr;
+      padding: 60px 24px;
+    }
+    .cta-section {
+      flex-direction: column;
+      padding: 60px 24px;
+      gap: 32px;
+      text-align: center;
+    }
+    .mr-footer {
+      padding: 60px 24px 40px;
+    }
+    .mr-footer-grid {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+    .mr-footer-bottom {
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
     }
   }
