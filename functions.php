@@ -118,6 +118,92 @@ function marcos_rosa_cpt_imovel() {
 }
 add_action('init', 'marcos_rosa_cpt_imovel');
 
+// ─── META BOX: IMOVEL ───────────────────────────────────────
+function marcos_rosa_imovel_meta_box_register() {
+    add_meta_box(
+        'marcos_rosa_imovel_detalhes',
+        'Detalhes do Imóvel',
+        'marcos_rosa_imovel_meta_box',
+        'imovel',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes', 'marcos_rosa_imovel_meta_box_register');
+
+function marcos_rosa_imovel_meta_box($post) {
+    wp_nonce_field('marcos_rosa_save_imovel', 'marcos_rosa_imovel_nonce');
+    $tipo      = get_post_meta($post->ID, '_imovel_tipo',      true);
+    $bairro    = get_post_meta($post->ID, '_imovel_bairro',    true);
+    $preco     = get_post_meta($post->ID, '_imovel_preco',     true);
+    $quartos   = get_post_meta($post->ID, '_imovel_quartos',   true);
+    $banheiros = get_post_meta($post->ID, '_imovel_banheiros', true);
+    $vagas     = get_post_meta($post->ID, '_imovel_vagas',     true);
+    $badge     = get_post_meta($post->ID, '_imovel_badge',     true);
+    ?>
+    <table class="form-table">
+      <tr>
+        <th><label for="imovel_tipo">Tipo</label></th>
+        <td>
+          <select id="imovel_tipo" name="imovel_tipo">
+            <option value="">— selecione —</option>
+            <?php foreach (['Apartamento','Casa','Terreno','Comercial'] as $opt): ?>
+              <option value="<?php echo esc_attr($opt); ?>" <?php selected($tipo, $opt); ?>><?php echo esc_html($opt); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <th><label for="imovel_bairro">Bairro</label></th>
+        <td><input type="text" id="imovel_bairro" name="imovel_bairro" value="<?php echo esc_attr($bairro); ?>" placeholder="ex: Jundiaí" class="regular-text"></td>
+      </tr>
+      <tr>
+        <th><label for="imovel_preco">Preço (R$)</label></th>
+        <td><input type="text" id="imovel_preco" name="imovel_preco" value="<?php echo esc_attr($preco); ?>" placeholder="ex: 350.000" class="regular-text"></td>
+      </tr>
+      <tr>
+        <th><label for="imovel_quartos">Quartos</label></th>
+        <td><input type="number" id="imovel_quartos" name="imovel_quartos" value="<?php echo esc_attr($quartos); ?>" min="0" class="small-text"></td>
+      </tr>
+      <tr>
+        <th><label for="imovel_banheiros">Banheiros</label></th>
+        <td><input type="number" id="imovel_banheiros" name="imovel_banheiros" value="<?php echo esc_attr($banheiros); ?>" min="0" class="small-text"></td>
+      </tr>
+      <tr>
+        <th><label for="imovel_vagas">Vagas</label></th>
+        <td><input type="number" id="imovel_vagas" name="imovel_vagas" value="<?php echo esc_attr($vagas); ?>" min="0" class="small-text"></td>
+      </tr>
+      <tr>
+        <th><label for="imovel_badge">Badge</label></th>
+        <td><input type="text" id="imovel_badge" name="imovel_badge" value="<?php echo esc_attr($badge); ?>" placeholder="ex: LANÇAMENTO" class="regular-text"></td>
+      </tr>
+    </table>
+    <?php
+}
+
+function marcos_rosa_save_imovel_meta($post_id) {
+    if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE )           return $post_id;
+    if ( ! isset($_POST['marcos_rosa_imovel_nonce']) )           return $post_id;
+    if ( ! wp_verify_nonce($_POST['marcos_rosa_imovel_nonce'],
+                           'marcos_rosa_save_imovel') )          return $post_id;
+    if ( ! current_user_can('edit_post', $post_id) )             return $post_id;
+
+    $campos_texto = ['imovel_tipo','imovel_bairro','imovel_preco','imovel_badge'];
+    foreach ($campos_texto as $campo) {
+        if (isset($_POST[$campo])) {
+            update_post_meta($post_id, '_' . $campo, sanitize_text_field($_POST[$campo]));
+        }
+    }
+    $campos_num = ['imovel_quartos','imovel_banheiros','imovel_vagas'];
+    foreach ($campos_num as $campo) {
+        if (isset($_POST[$campo])) {
+            update_post_meta($post_id, '_' . $campo, absint($_POST[$campo]));
+        }
+    }
+    return $post_id;
+}
+add_action('save_post_imovel', 'marcos_rosa_save_imovel_meta');
+
 // ─── IDENTIDADE Marcos Rosa — Corretor Imobiliário ──────────
 remove_action('wp_head', 'wp_generator');
 
