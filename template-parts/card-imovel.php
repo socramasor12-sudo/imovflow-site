@@ -51,7 +51,7 @@ if ($valor !== '' && is_numeric(str_replace(['.', ','], '', $valor))) {
   <div class="imovel-rodape">
     <div class="imovel-preco">
       <?php if ($preco_formatado) : ?>
-        <?php echo $preco_formatado; ?>
+        <?php echo esc_html( $preco_formatado ); ?>
         <?php if ($finalidade) : ?>
           <small class="imovel-finalidade"><?php echo esc_html($finalidade); ?></small>
         <?php endif; ?>

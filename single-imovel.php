@@ -18,10 +18,19 @@ get_header();
     $bairro     = get_post_meta($post_id, '_imovel_bairro',     true);
     $badge      = get_post_meta($post_id, '_imovel_badge',      true);
 
-    // Formata valor: "350000" → "R$ 350.000"
+    // Formata valor: suporta "350000", "350.000", "350,000" → "R$ 350.000"
     $valor_fmt = '';
-    if ($valor) {
-        $valor_fmt = 'R$ ' . number_format((float) $valor, 0, ',', '.');
+    if ($valor !== '' && $valor) {
+        if (is_numeric(str_replace(['.', ','], '', $valor))) {
+            $valor_numerico = (float) str_replace(['.', ','], ['', '.'], $valor);
+            // Se o valor usa ponto como separador de milhar (ex: "350.000"), parse correto
+            if (preg_match('/^\d{1,3}(\.\d{3})+$/', trim($valor))) {
+                $valor_numerico = (float) str_replace('.', '', $valor);
+            }
+            $valor_fmt = 'R$ ' . number_format($valor_numerico, 0, ',', '.');
+        } else {
+            $valor_fmt = 'R$ ' . $valor;
+        }
     }
 
     // Link WhatsApp com texto pré-preenchido
