@@ -525,3 +525,24 @@
       text-align: center;
     }
   }
+}
+
+/* ═══════════════════════════════════════
+   FIX: Hero layout e pointer-events
+═══════════════════════════════════════ */
+.hero-direita, .hero-img-bg, .hero-logo-grande, .hero-overlay { pointer-events: none; }
+
+.hero { position: relative; }
+.hero-direita {
+  position: absolute !important;
+  right: 0; top: 0; bottom: 0;
+  width: 50%;
+  z-index: 0;
+  pointer-events: none;
+}
+.hero-esquerda {
+  position: relative;
+  z-index: 3;
+  width: 50%;
+}
+.hero-stats { z-index: 3 !important; }
