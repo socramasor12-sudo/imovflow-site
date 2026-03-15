@@ -55,7 +55,7 @@
 <?php
 $imoveis = new WP_Query([
     'post_type'      => 'imovel',
-    'posts_per_page' => 3,
+    'posts_per_page' => 6,
     'post_status'    => 'publish',
 ]);
 if ($imoveis->have_posts()) : ?>
@@ -68,47 +68,8 @@ if ($imoveis->have_posts()) : ?>
     <a href="<?php echo esc_url(get_post_type_archive_link('imovel')); ?>" class="ver-todos">Ver todos</a>
   </div>
   <div class="imoveis-grid">
-    <?php while ($imoveis->have_posts()) : $imoveis->the_post();
-      $tipo      = get_post_meta(get_the_ID(), '_imovel_tipo',      true);
-      $bairro    = get_post_meta(get_the_ID(), '_imovel_bairro',    true);
-      $preco     = get_post_meta(get_the_ID(), '_imovel_preco',     true);
-      $quartos   = get_post_meta(get_the_ID(), '_imovel_quartos',   true);
-      $banheiros = get_post_meta(get_the_ID(), '_imovel_banheiros', true);
-      $vagas     = get_post_meta(get_the_ID(), '_imovel_vagas',     true);
-      $badge     = get_post_meta(get_the_ID(), '_imovel_badge',     true);
-    ?>
-    <?php // Nota: estrutura 3-blocos (imovel-info + imovel-rodape) intencional — corresponde ao CSS existente. ?>
-    <div class="imovel-card">
-      <div class="imovel-img">
-        <?php if (has_post_thumbnail()) :
-          the_post_thumbnail('medium', ['class' => 'imovel-thumb']);
-        else : ?>
-          <div class="imovel-img-placeholder">MR</div>
-        <?php endif; ?>
-        <?php if ($badge) : ?>
-          <div class="imovel-badge"><?php echo esc_html($badge); ?></div>
-        <?php endif; ?>
-      </div>
-      <div class="imovel-info">
-        <div class="imovel-tipo"><?php echo esc_html($tipo); ?></div>
-        <div class="imovel-nome"><?php the_title(); ?></div>
-        <?php if ($bairro) : ?>
-          <div class="imovel-local">📍 <?php echo esc_html($bairro); ?>, Anápolis/GO</div>
-        <?php endif; ?>
-      </div>
-      <div class="imovel-rodape">
-        <?php if ($preco) : ?>
-          <div class="imovel-preco">R$ <?php echo esc_html($preco); ?> <span>a partir de</span></div>
-        <?php endif; ?>
-        <?php if ($quartos || $banheiros || $vagas) : ?>
-        <div class="imovel-detalhes">
-          <?php if ($quartos)   echo '<div class="detalhe"><div class="detalhe-num">' . absint($quartos)   . '</div><div class="detalhe-label">Qtos</div></div>'; ?>
-          <?php if ($banheiros) echo '<div class="detalhe"><div class="detalhe-num">' . absint($banheiros) . '</div><div class="detalhe-label">Banh</div></div>'; ?>
-          <?php if ($vagas)     echo '<div class="detalhe"><div class="detalhe-num">' . absint($vagas)     . '</div><div class="detalhe-label">Vagas</div></div>'; ?>
-        </div>
-        <?php endif; ?>
-      </div>
-    </div>
+    <?php while ($imoveis->have_posts()) : $imoveis->the_post(); ?>
+        <?php get_template_part('template-parts/card-imovel'); ?>
     <?php endwhile; wp_reset_postdata(); ?>
   </div>
 </section>
