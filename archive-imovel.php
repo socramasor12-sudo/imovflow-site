@@ -91,7 +91,6 @@ $imoveis_query = new WP_Query( $query_args );
             // Pagination
             $pagination = paginate_links( array(
                 'base'      => str_replace( 999999999, '%#%', esc_url( get_pagenum_link( 999999999 ) ) ),
-                'format'    => '?paged=%#%',
                 'current'   => max( 1, get_query_var( 'paged' ) ),
                 'total'     => $imoveis_query->max_num_pages,
                 'prev_text' => '&larr; Anterior',
@@ -101,15 +100,8 @@ $imoveis_query = new WP_Query( $query_args );
 
             if ( $pagination ) : ?>
                 <nav style="margin-top: 56px; text-align: center;" aria-label="Paginação de imóveis">
-                    <style>
-                        .imoveis-pagination ul { list-style: none; padding: 0; margin: 0; display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-                        .imoveis-pagination li a,
-                        .imoveis-pagination li span { display: inline-block; padding: 8px 16px; font-family: 'Josefin Sans', sans-serif; font-size: 0.82rem; letter-spacing: 0.06em; text-decoration: none; border: 1px solid rgba(26,39,68,0.25); color: var(--azul); border-radius: 2px; transition: all 0.2s ease; }
-                        .imoveis-pagination li a:hover { background-color: var(--azul); color: #fff; border-color: var(--azul); }
-                        .imoveis-pagination li span.current { background-color: var(--dourado); color: #fff; border-color: var(--dourado); }
-                    </style>
                     <div class="imoveis-pagination">
-                        <?php echo $pagination; ?>
+                        <?php echo wp_kses_post( $pagination ); ?>
                     </div>
                 </nav>
             <?php endif; ?>

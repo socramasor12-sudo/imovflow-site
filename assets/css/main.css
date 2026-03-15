@@ -360,6 +360,11 @@
   }
   .btn-captacao:hover { background: var(--dourado-claro); }
 
+  /* PAGINAÇÃO — IMÓVEIS */
+  .imoveis-pagination { text-align: center; margin: 48px 0; }
+  .imoveis-pagination .page-numbers { display: inline-block; padding: 8px 14px; margin: 0 2px; border: 1px solid rgba(201,168,76,0.3); color: var(--azul); text-decoration: none; }
+  .imoveis-pagination .page-numbers.current { background: var(--dourado); color: #fff; border-color: var(--dourado); }
+
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(30px); }
     to { opacity: 1; transform: translateY(0); }
@@ -519,6 +524,9 @@
     .single-imovel-grid { grid-template-columns: 1fr !important; }
     .single-imovel-card { padding: 24px !important; }
     .single-page-section { padding-left: 24px; padding-right: 24px; }
+    .imoveis-pagination { text-align: center; margin: 48px 0; }
+    .imoveis-pagination .page-numbers { display: inline-block; padding: 8px 14px; margin: 0 2px; border: 1px solid rgba(201,168,76,0.3); color: var(--azul); text-decoration: none; }
+    .imoveis-pagination .page-numbers.current { background: var(--dourado); color: #fff; border-color: var(--dourado); }
     .mr-footer-grid {
       grid-template-columns: 1fr;
       gap: 40px;
