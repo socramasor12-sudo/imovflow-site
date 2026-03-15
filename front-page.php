@@ -212,7 +212,6 @@ if ($imoveis->have_posts()) : ?>
     <div class="cta-tag">Pronto para começar?</div>
     <div class="cta-titulo">Encontre seu imóvel<br><span>ideal hoje</span></div>
   </div>
-  <a href="https://wa.me/5562981148448" class="btn-cta">💬 Falar no WhatsApp</a>
 </section>
 
 <?php get_footer(); ?>
