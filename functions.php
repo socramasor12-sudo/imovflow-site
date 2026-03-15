@@ -109,10 +109,11 @@ function marcos_rosa_cpt_imovel() {
         'public'          => true,
         'show_ui'         => true,
         'show_in_menu'    => true,
-        'menu_icon'       => 'dashicons-admin-home',
+        'show_in_rest'    => true,
+        'menu_icon'       => 'dashicons-building',
         'rewrite'         => ['slug' => 'imoveis', 'with_front' => false],
         'has_archive'     => true,
-        'supports'        => ['title', 'thumbnail'],
+        'supports'        => ['title', 'editor', 'thumbnail'],
         'capability_type' => 'post',
     ]);
 }
@@ -133,13 +134,15 @@ add_action('add_meta_boxes', 'marcos_rosa_imovel_meta_box_register');
 
 function marcos_rosa_imovel_meta_box($post) {
     wp_nonce_field('marcos_rosa_save_imovel', 'marcos_rosa_imovel_nonce');
-    $tipo      = get_post_meta($post->ID, '_imovel_tipo',      true);
-    $bairro    = get_post_meta($post->ID, '_imovel_bairro',    true);
-    $preco     = get_post_meta($post->ID, '_imovel_preco',     true);
-    $quartos   = get_post_meta($post->ID, '_imovel_quartos',   true);
-    $banheiros = get_post_meta($post->ID, '_imovel_banheiros', true);
-    $vagas     = get_post_meta($post->ID, '_imovel_vagas',     true);
-    $badge     = get_post_meta($post->ID, '_imovel_badge',     true);
+    $tipo       = get_post_meta($post->ID, '_imovel_tipo',       true);
+    $finalidade = get_post_meta($post->ID, '_imovel_finalidade', true);
+    $bairro     = get_post_meta($post->ID, '_imovel_bairro',     true);
+    $valor      = get_post_meta($post->ID, '_imovel_valor',      true);
+    $area       = get_post_meta($post->ID, '_imovel_area',       true);
+    $quartos    = get_post_meta($post->ID, '_imovel_quartos',    true);
+    $banheiros  = get_post_meta($post->ID, '_imovel_banheiros',  true);
+    $vagas      = get_post_meta($post->ID, '_imovel_vagas',      true);
+    $badge      = get_post_meta($post->ID, '_imovel_badge',      true);
     ?>
     <table class="form-table">
       <tr>
@@ -154,12 +157,27 @@ function marcos_rosa_imovel_meta_box($post) {
         </td>
       </tr>
       <tr>
+        <th><label for="imovel_finalidade">Finalidade</label></th>
+        <td>
+          <select id="imovel_finalidade" name="imovel_finalidade">
+            <option value="">— selecione —</option>
+            <?php foreach (['Venda','Aluguel'] as $opt): ?>
+              <option value="<?php echo esc_attr($opt); ?>" <?php selected($finalidade, $opt); ?>><?php echo esc_html($opt); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </td>
+      </tr>
+      <tr>
         <th><label for="imovel_bairro">Bairro</label></th>
         <td><input type="text" id="imovel_bairro" name="imovel_bairro" value="<?php echo esc_attr($bairro); ?>" placeholder="ex: Jundiaí" class="regular-text"></td>
       </tr>
       <tr>
-        <th><label for="imovel_preco">Preço (R$)</label></th>
-        <td><input type="text" id="imovel_preco" name="imovel_preco" value="<?php echo esc_attr($preco); ?>" placeholder="ex: 350.000" class="regular-text"></td>
+        <th><label for="imovel_valor">Valor (R$)</label></th>
+        <td><input type="text" id="imovel_valor" name="imovel_valor" value="<?php echo esc_attr($valor); ?>" placeholder="ex: 350.000" class="regular-text"></td>
+      </tr>
+      <tr>
+        <th><label for="imovel_area">Área (m²)</label></th>
+        <td><input type="text" id="imovel_area" name="imovel_area" value="<?php echo esc_attr($area); ?>" placeholder="ex: 85" class="regular-text"></td>
       </tr>
       <tr>
         <th><label for="imovel_quartos">Quartos</label></th>
@@ -188,7 +206,7 @@ function marcos_rosa_save_imovel_meta($post_id) {
                            'marcos_rosa_save_imovel') )          return $post_id;
     if ( ! current_user_can('edit_post', $post_id) )             return $post_id;
 
-    $campos_texto = ['imovel_tipo','imovel_bairro','imovel_preco','imovel_badge'];
+    $campos_texto = ['imovel_tipo','imovel_finalidade','imovel_bairro','imovel_valor','imovel_area','imovel_badge'];
     foreach ($campos_texto as $campo) {
         if (isset($_POST[$campo])) {
             update_post_meta($post_id, '_' . $campo, sanitize_text_field($_POST[$campo]));
