@@ -7,15 +7,16 @@ get_header();
 ?>
 
 <?php while (have_posts()) : the_post();
-    $tipo       = get_post_meta(get_the_ID(), '_imovel_tipo',       true);
-    $finalidade = get_post_meta(get_the_ID(), '_imovel_finalidade', true);
-    $valor      = get_post_meta(get_the_ID(), '_imovel_valor',      true);
-    $area       = get_post_meta(get_the_ID(), '_imovel_area',       true);
-    $quartos    = get_post_meta(get_the_ID(), '_imovel_quartos',    true);
-    $banheiros  = get_post_meta(get_the_ID(), '_imovel_banheiros',  true);
-    $vagas      = get_post_meta(get_the_ID(), '_imovel_vagas',      true);
-    $bairro     = get_post_meta(get_the_ID(), '_imovel_bairro',     true);
-    $badge      = get_post_meta(get_the_ID(), '_imovel_badge',      true);
+    $post_id    = get_the_ID();
+    $tipo       = get_post_meta($post_id, '_imovel_tipo',       true);
+    $finalidade = get_post_meta($post_id, '_imovel_finalidade', true);
+    $valor      = get_post_meta($post_id, '_imovel_valor',      true);
+    $area       = get_post_meta($post_id, '_imovel_area',       true);
+    $quartos    = get_post_meta($post_id, '_imovel_quartos',    true);
+    $banheiros  = get_post_meta($post_id, '_imovel_banheiros',  true);
+    $vagas      = get_post_meta($post_id, '_imovel_vagas',      true);
+    $bairro     = get_post_meta($post_id, '_imovel_bairro',     true);
+    $badge      = get_post_meta($post_id, '_imovel_badge',      true);
 
     // Formata valor: "350000" → "R$ 350.000"
     $valor_fmt = '';
@@ -29,7 +30,7 @@ get_header();
 ?>
 
 <!-- ─── HERO DO IMÓVEL ──────────────────────────────────────────────── -->
-<section style="
+<section class="single-page-section" style="
     background: var(--azul);
     padding: 140px 60px 60px;
     text-align: center;
@@ -82,7 +83,7 @@ get_header();
         max-width: 800px;
         margin-left: auto;
         margin-right: auto;
-    "><?php the_title(); ?></h1>
+    "><?php echo esc_html( get_the_title() ); ?></h1>
 
     <?php if ($bairro) : ?>
         <div style="
@@ -95,7 +96,7 @@ get_header();
 </section>
 
 <!-- ─── LAYOUT PRINCIPAL (imagem + detalhes) ────────────────────────── -->
-<section style="
+<section class="single-page-section" style="
     background: var(--branco);
     padding: 60px;
 ">
@@ -131,7 +132,7 @@ get_header();
         </div>
 
         <!-- CARD DE DETALHES -->
-        <div style="
+        <div class="single-imovel-card" style="
             background: white;
             border: 1px solid var(--cinza-claro);
             padding: 40px;
@@ -242,7 +243,7 @@ get_header();
 
 <!-- ─── DESCRIÇÃO COMPLETA ───────────────────────────────────────────── -->
 <?php if (get_the_content()) : ?>
-<section style="
+<section class="single-page-section" style="
     background: white;
     border-top: 1px solid var(--cinza-claro);
     padding: 60px;
@@ -283,7 +284,7 @@ get_header();
 <?php endif; ?>
 
 <!-- ─── CTA WHATSAPP FINAL ───────────────────────────────────────────── -->
-<section style="
+<section class="single-page-section" style="
     background: var(--azul);
     padding: 80px 60px;
     text-align: center;
@@ -328,19 +329,6 @@ get_header();
         </a>
     </div>
 </section>
-
-<!-- ─── RESPONSIVIDADE (mobile) ─────────────────────────────────────── -->
-<style>
-@media (max-width: 768px) {
-    .single-imovel-grid {
-        grid-template-columns: 1fr !important;
-    }
-    section {
-        padding-left: 24px !important;
-        padding-right: 24px !important;
-    }
-}
-</style>
 
 <?php endwhile; ?>
 

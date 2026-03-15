@@ -516,6 +516,9 @@
     .mr-footer {
       padding: 60px 24px 40px;
     }
+    .single-imovel-grid { grid-template-columns: 1fr !important; }
+    .single-imovel-card { padding: 24px !important; }
+    .single-page-section { padding-left: 24px; padding-right: 24px; }
     .mr-footer-grid {
       grid-template-columns: 1fr;
       gap: 40px;
