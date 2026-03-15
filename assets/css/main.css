@@ -42,7 +42,7 @@
 
   /* HERO */
   .hero {
-    min-height: 80vh; display: grid; grid-template-columns: 1fr 1fr;
+    min-height: auto; padding: 120px 0; display: grid; grid-template-columns: 1fr 1fr;
     position: relative; overflow: hidden;
   }
   .hero-esquerda {
