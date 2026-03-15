@@ -1,21 +1,5 @@
 <?php get_header(); ?>
 
-
-<!-- HEADER -->
-<header>
-  <a href="#" class="logo-header">
-    <img src="<?php echo get_template_directory_uri(); ?>/assets/img/logo.png" alt="Marcos Rosa — Corretor Imobiliário">
-  </a>
-  <nav>
-    <a href="#imoveis">Lançamentos</a>
-    <a href="#revendas">Revendas</a>
-    <a href="#vender">Vender Imóvel</a>
-    <a href="#sobre">Sobre</a>
-    <a href="#contato">Contato</a>
-  </nav>
-  <a href="https://wa.me/5562981148448" class="btn-wpp-header">💬 Fale Agora</a>
-</header>
-
 <!-- HERO -->
 <section class="hero">
   <div class="hero-esquerda">
