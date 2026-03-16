@@ -194,23 +194,19 @@
     gap: 60px; align-items: stretch;
   }
   .sobre-foto {
-    position: relative;
+    height: 600px;
     overflow: hidden;
     border-radius: 8px;
-    border: 1px solid rgba(201,168,76,0.2);
-    height: 600px;
   }
   .sobre-foto:hover img { filter: grayscale(60%) contrast(1.05); }
   .sobre-foto img {
-    position: absolute;
-    top: 0; left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center top;
+    display: block;
     filter: grayscale(100%) contrast(1.1);
     transition: filter 0.5s ease;
-    border-radius: 8px;
   }
   .sobre-foto::before {
     content: ''; position: absolute; top: 16px; right: -16px;
