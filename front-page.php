@@ -79,7 +79,7 @@ if ($imoveis->have_posts()) : ?>
 <section class="sobre-section" id="sobre">
 
   <div class="sobre-foto">
-    <img src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/images/marcos-rosa.png"
+    <img src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/marcos-rosa.png"
          alt="Marcos Rosa — Corretor de Imóveis CRECI-GO 35088-F">
   </div>
 
