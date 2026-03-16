@@ -81,7 +81,7 @@ if ($imoveis->have_posts()) : ?>
   <div class="sobre-foto">
     <img src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/marcos-rosa.png"
          alt="Marcos Rosa — Corretor de Imóveis CRECI-GO 35088-F"
-         style="width:100%;height:600px;object-fit:cover;object-position:center top;display:block;max-width:none;max-height:none;">
+         style="width:100%;height:600px;object-fit:cover;object-position:center 20%;display:block;max-width:none;max-height:none;">
   </div>
 
   <div class="sobre-conteudo">
