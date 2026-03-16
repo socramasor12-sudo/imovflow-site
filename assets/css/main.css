@@ -200,6 +200,11 @@
     display: block;
     width: 100%;
   }
+  section#sobre .sobre-foto {
+    height: 600px !important;
+    overflow: hidden !important;
+    width: 100% !important;
+  }
   .sobre-foto:hover img { filter: grayscale(60%) contrast(1.05); }
   .sobre-foto img {
     width: 100% !important;
@@ -211,6 +216,16 @@
     max-height: none !important;
     filter: grayscale(100%) contrast(1.1);
     transition: filter 0.5s ease;
+  }
+  section#sobre .sobre-foto img {
+    width: 100% !important;
+    height: 600px !important;
+    object-fit: cover !important;
+    object-position: center top !important;
+    display: block !important;
+    max-width: none !important;
+    max-height: none !important;
+    min-height: 600px !important;
   }
   .sobre-foto::before {
     content: ''; position: absolute; top: 16px; right: -16px;
