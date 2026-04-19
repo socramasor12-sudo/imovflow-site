@@ -1,7 +1,8 @@
 <?php
 /**
- * Marcos Rosa Corretor — functions.php
+ * Marcos Rosa Corretor — functions.php v2.0.0
  * CRECI-GO 35088-F
+ * WhatsApp fix + SMTP
  */
 
 // ─── SETUP ──────────────────────────────────────────────────
@@ -23,12 +24,12 @@ function marcos_rosa_scripts() {
     // CSS principal
     wp_enqueue_style('marcos-rosa-main',
         get_template_directory_uri() . '/assets/css/main.css',
-        ['google-fonts'], '1.0.0'
+        ['google-fonts'], '2.0.0'
     );
     // JS principal
     wp_enqueue_script('marcos-rosa-main',
         get_template_directory_uri() . '/assets/js/main.js',
-        [], '1.0.0', true
+        [], '2.1.0', true
     );
 
     // Passa variáveis para o JS
@@ -43,6 +44,7 @@ add_action('wp_enqueue_scripts', 'marcos_rosa_scripts');
 
 // ─── CAPTAÇÃO — AJAX HANDLER ────────────────────────────────
 function marcos_rosa_captacao() {
+    error_log('MR_CAPTACAO: ' . print_r($_POST, true));
     check_ajax_referer('marcos_rosa_nonce', 'nonce');
 
     $nome    = sanitize_text_field($_POST['nome'] ?? '');
@@ -77,8 +79,8 @@ function marcos_rosa_captacao() {
     wp_mail('mrcimoveis78@gmail.com', $assunto, $mensagem);
 
     // Link WhatsApp para contato imediato
-    $wpp_limpo = preg_replace('/\D/', '', $wpp);
-    $wpp_link  = "https://wa.me/55{$wpp_limpo}?text=" . urlencode("Olá {$nome}! Sou Marcos Rosa, Corretor Imobiliário CRECI-GO 35088-F. Vi que você tem um {$tipo} em {$bairro} para vender. Podemos conversar?");
+    $msg      = rawurlencode("Olá Marcos! Meu nome é {$nome}, tenho um {$tipo} em {$bairro} para anunciar. Valor pretendido: R$ {$valor}. Pode me ajudar?");
+    $wpp_link = "https://api.whatsapp.com/send?phone=5562981148448&text={$msg}";
 
     wp_send_json_success([
         'msg'      => 'Recebido! Marcos Rosa entrará em contato em breve.',
@@ -87,6 +89,20 @@ function marcos_rosa_captacao() {
 }
 add_action('wp_ajax_marcos_rosa_captacao', 'marcos_rosa_captacao');
 add_action('wp_ajax_nopriv_marcos_rosa_captacao', 'marcos_rosa_captacao');
+
+// ─── SMTP CONFIG ────────────────────────────────────────────
+function marcos_rosa_smtp( $phpmailer ) {
+    $phpmailer->isSMTP();
+    $phpmailer->Host       = 'smtp.imovflow.com.br';
+    $phpmailer->SMTPAuth   = true;
+    $phpmailer->Port       = 587;
+    $phpmailer->SMTPSecure = 'tls';
+    $phpmailer->Username   = 'contato@imovflow.com.br';
+    $phpmailer->Password   = 'Imov2026';
+    $phpmailer->From       = 'contato@imovflow.com.br';
+    $phpmailer->FromName   = 'IMOVFLOW — Captação';
+}
+add_action( 'phpmailer_init', 'marcos_rosa_smtp' );
 
 // ─── CPT: CAPTACAO ──────────────────────────────────────────
 function marcos_rosa_cpt() {
@@ -268,3 +284,4 @@ function marcos_rosa_seo_meta() {
     <?php
 }
 add_action( 'wp_head', 'marcos_rosa_seo_meta', 1 );
+

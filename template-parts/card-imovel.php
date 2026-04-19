@@ -28,10 +28,12 @@ if ($valor !== '' && is_numeric(str_replace(['.', ','], '', $valor))) {
 <a class="imovel-card" href="<?php echo esc_url(get_permalink()); ?>">
 
   <div class="imovel-img">
-    <?php if (has_post_thumbnail()) : ?>
-      <?php the_post_thumbnail('medium', ['class' => 'imovel-thumb']); ?>
+    <?php
+    $thumb_url = get_the_post_thumbnail_url(null, "large");
+    if ($thumb_url) : ?>
+      <div class="imovel-img-bg" style="background-image: url(<?php echo esc_url($thumb_url); ?>); background-size: cover; background-position: center; width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
     <?php else : ?>
-      <div class="imovel-img-placeholder">MR</div>
+      <div class="imovel-img-placeholder"></div>
     <?php endif; ?>
     <?php if ($badge) : ?>
       <div class="imovel-badge"><?php echo esc_html($badge); ?></div>

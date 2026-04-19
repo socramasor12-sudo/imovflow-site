@@ -79,10 +79,16 @@ if ($imoveis->have_posts()) : ?>
 <section class="sobre-section" id="sobre">
 
   <div class="sobre-foto">
-    <img src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/marcos-rosa.png"
-         alt="Marcos Rosa — Corretor de Imóveis CRECI-GO 35088-F"
-         style="width:100%;height:600px;object-fit:cover;object-position:center 20%;display:block;max-width:none;max-height:none;">
-  </div>
+  <img 
+    class="sobre-foto-img"
+    src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/marcos-rosa-desktop.jpg"
+    srcset="<?php echo esc_url(get_template_directory_uri()); ?>/assets/img/marcos-rosa-desktop.jpg 600w, <?php echo esc_url(get_template_directory_uri()); ?>/assets/img/marcos-rosa-retina.jpg 1200w"
+    sizes="(max-width: 768px) 100vw, 50vw"
+    alt="Marcos Rosa - Corretor de Imoveis CRECI-GO 35088-F"
+    width="600" height="720"
+    loading="lazy"
+  />
+</div>
 
   <div class="sobre-conteudo">
     <div class="section-tag" style="color:rgba(201,168,76,0.6)">Conheça</div>

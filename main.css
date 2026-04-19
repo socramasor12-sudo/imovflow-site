@@ -218,7 +218,7 @@
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
-    object-position: center top;
+    object-position: center center;
     display: block !important;
     max-width: none !important;
     max-height: none !important;
@@ -229,7 +229,7 @@
     width: 100% !important;
     height: 600px !important;
     object-fit: cover !important;
-    object-position: center top !important;
+    object-position: center center !important;
     display: block !important;
     max-width: none !important;
     max-height: none !important;
@@ -800,32 +800,48 @@ section:first-of-type {
     }
 }
 
-/* FIX LIGHTBOX removido daqui — agora esta em single-imovel.php */
+
+@media (max-width: 768px) {
+  .sobre-foto {
+    aspect-ratio: 3/4 !important;
+    min-height: 300px;
+    height: auto !important;
+  }
+}
 
 
-/* ═══ FIX 30/03 — CARDS COMPACTOS ═══ */
-.imovel-info {
-    padding: 16px 20px 12px !important;
+@media (max-width: 768px) {
+  
 }
-.imovel-nome {
-    font-size: 1.05rem !important;
-    line-height: 1.25 !important;
-    margin-bottom: 4px !important;
+
+
+
+/* ====== FIX v4: foto Sobre com <img> tag ====== */
+.sobre-section {
+  align-items: center !important;
 }
-.imovel-tipo {
-    margin-bottom: 4px !important;
+.sobre-foto {
+  position: relative;
+  
+  overflow: hidden;
+  aspect-ratio: 2/3 !important;
+  min-height: 0 !important;
+  width: 100%;
 }
-.imovel-local {
-    font-size: 0.6rem !important;
+.sobre-foto .sobre-foto-img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+  max-width: none !important;
 }
-.imovel-rodape {
-    padding: 12px 20px !important;
+@media (max-width: 768px) {
+  .sobre-foto {
+    aspect-ratio: 3/4 !important;
+  }
 }
-.imovel-preco {
-    font-size: 1.25rem !important;
-}
-.imovel-finalidade {
-    font-size: 0.6rem !important;
-    display: block !important;
-    margin-top: 2px !important;
-}
+/* ====== FIM FIX v4 ====== */

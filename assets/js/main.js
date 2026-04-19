@@ -1,107 +1,94 @@
-// ═══════════════════════════════════════
-// MARCOS ROSA — JS Principal
-// CRECI-GO 35088-F
-// ═══════════════════════════════════════
+/**
+ * Marcos Rosa — main.js v2.1.0
+ * Formulário → WhatsApp direto (sem depender de AJAX)
+ */
+document.addEventListener('DOMContentLoaded', function() {
 
-document.addEventListener('DOMContentLoaded', function () {
+  // ─── MENU MOBILE ─────────────────────────────────
+  var menuToggle = document.querySelector('.menu-toggle');
+  var navMenu    = document.querySelector('.nav-menu');
+  if (menuToggle && navMenu) {
+    menuToggle.addEventListener('click', function() {
+      navMenu.classList.toggle('active');
+      menuToggle.classList.toggle('active');
+    });
+    navMenu.querySelectorAll('a').forEach(function(link) {
+      link.addEventListener('click', function() {
+        navMenu.classList.remove('active');
+        menuToggle.classList.remove('active');
+      });
+    });
+  }
 
-  // ─── HEADER SCROLL ───────────────────
-  const header = document.getElementById('mr-header');
-  window.addEventListener('scroll', () => {
-    header?.classList.toggle('scrolled', window.scrollY > 50);
-  });
-
-  // ─── MENU MOBILE ─────────────────────
-  const toggle = document.getElementById('mr-menu-toggle');
-  const nav    = document.querySelector('.mr-nav');
-  toggle?.addEventListener('click', () => {
-    nav?.classList.toggle('open');
-    toggle.classList.toggle('open');
-  });
-
-  // ─── SMOOTH SCROLL PARA ÂNCORAS ──────
-  document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', e => {
-      const target = document.querySelector(a.getAttribute('href'));
+  // ─── SMOOTH SCROLL ───────────────────────────────
+  document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+    anchor.addEventListener('click', function(e) {
+      var target = document.querySelector(this.getAttribute('href'));
       if (target) {
         e.preventDefault();
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        nav?.classList.remove('open');
       }
     });
   });
 
-});
+  // ─── FORMULÁRIO CAPTAÇÃ� -> WHATSAPP DIRETO ───────────
+  var form = document.getElementById('form-captacao');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
 
-// ─── BUSCA ─────────────────────────────
-function executarBusca() {
-  const finalidade = document.getElementById('busca-finalidade')?.value || '';
-  const tipo       = document.getElementById('busca-tipo')?.value || '';
-  const bairro     = document.getElementById('busca-bairro')?.value || '';
+      var nome    = (form.querySelector('[name="nome"]') || {}).value || '';
+      var wpp     = (form.querySelector('[name="whatsapp"]') || {}).value || '';
+      var tipo    = (form.querySelector('[name="tipo"]') || {}).value || '';
+      var bairro  = (form.querySelector('[name="bairro"]') || {}).value || '';
+      var valor   = (form.querySelector('[name="valor"]') || {}).value || '';
 
-  const params = new URLSearchParams();
-  if (finalidade) params.set('finalidade', finalidade);
-  if (tipo)       params.set('tipo', tipo);
-  if (bairro)     params.set('bairro', bairro);
+      if (!nome || !wpp) {
+        alert('Por favor, preencha seu nome e WhatsApp.');
+        return;
+      }
 
-  window.location.href = '/imoveis/?' + params.toString();
-}
+      var msg = 'Olá Marcos! Me chamo ' + nome + ' e tenho um imóvel para anunciar.'
+              + '\n\nTipo: ' + (tipo || 'Não informado')
+              + '\nBairro: ' + (bairro || 'Não informado')
+              + '\nValor pretendido: R$ ' + (valor || 'Não informado')
+              + '\nMeu WhatsApp: ' + wpp
+              + '\n\nEnviado pelo site imovflow.com.br';
 
-// ─── CAPTAÇÃO FORM ─────────────────────
-function enviarCaptacao() {
-  const nome   = document.getElementById('cap-nome')?.value?.trim();
-  const wpp    = document.getElementById('cap-wpp')?.value?.trim();
-  const tipo   = document.getElementById('cap-tipo')?.value;
-  const bairro = document.getElementById('cap-bairro')?.value?.trim();
-  const valor  = document.getElementById('cap-valor')?.value?.trim();
-  const msgDiv = document.getElementById('mr-captacao-msg');
-  const btn    = document.querySelector('.mr-btn-captacao');
+      var url = 'https://api.whatsapp.com/send?phone=5562981148448&text=' + encodeURIComponent(msg);
+      window.open(url, '_blank');
 
-  if (!nome || !wpp) {
-    showMsg(msgDiv, 'Preencha seu nome e WhatsApp.', 'err');
-    return;
+      var msgDiv = document.getElementById('captacao-msg') || document.querySelector('.mr-captacao-msg');
+      if (msgDiv) {
+        msgDiv.style.display = 'block';
+        msgDiv.className = 'mr-captacao-msg-ok';
+        msgDiv.textContent = 'Redirecionando para o WhatsApp...';
+        setTimeout(function() { msgDiv.style.display = 'none'; }, 5000);
+      }
+
+      if (typeof marcosRosa !== 'undefined' && marcosRosa.ajaxurl) {
+        var fd = new FormData(form);
+        fd.append('action', 'marcos_rosa_captacao');
+        fd.append('nonce', marcosRosa.nonce);
+        fetch(marcosRosa.ajaxurl, { method: 'POST', body: fd }).catch(function() {});
+      }
+
+      form.reset();
+    });
   }
 
-  btn.textContent = 'Enviando...';
-  btn.disabled = true;
+  // ─── OCULTAR WPP FLOAT PERTO DO FOOTER ───────────
+  (function() {
+    var float  = document.querySelector('.mr-wpp-float');
+    var footer = document.querySelector('.mr-footer');
+    if (!float || !footer) return;
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        float.style.opacity       = e.isIntersecting ? '0' : '1';
+        float.style.pointerEvents = e.isIntersecting ? 'none' : 'auto';
+      });
+    }, { threshold: 0.1 });
+    observer.observe(footer);
+  })();
 
-  const data = new FormData();
-  data.append('action', 'marcos_rosa_captacao');
-  data.append('nonce',  marcosRosa.nonce);
-  data.append('nome',   nome);
-  data.append('whatsapp', wpp);
-  data.append('tipo',   tipo);
-  data.append('bairro', bairro);
-  data.append('valor',  valor);
-
-  fetch(marcosRosa.ajaxurl, { method: 'POST', body: data })
-    .then(r => r.json())
-    .then(res => {
-      if (res.success) {
-        showMsg(msgDiv, res.data.msg, 'ok');
-        // Abre WhatsApp do proprietário automaticamente
-        setTimeout(() => window.open(res.data.wpp_link, '_blank'), 1500);
-        // Limpa form
-        ['cap-nome','cap-wpp','cap-bairro','cap-valor'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.value = '';
-        });
-        document.getElementById('cap-tipo').value = '';
-      } else {
-        showMsg(msgDiv, res.data?.msg || 'Erro ao enviar.', 'err');
-      }
-    })
-    .catch(() => showMsg(msgDiv, 'Erro de conexão. Tente pelo WhatsApp.', 'err'))
-    .finally(() => {
-      btn.textContent = '📲 Quero Anunciar Meu Imóvel';
-      btn.disabled = false;
-    });
-}
-
-function showMsg(el, msg, tipo) {
-  if (!el) return;
-  el.style.display = 'block';
-  el.className = tipo === 'ok' ? 'mr-captacao-msg-ok' : 'mr-captacao-msg-err';
-  el.textContent = msg;
-  setTimeout(() => { el.style.display = 'none'; }, 6000);
-}
+}); // end DOMContentLoaded
