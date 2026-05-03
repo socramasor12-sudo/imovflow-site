@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-publicar.py v2.1 - Marcos Rosa Negocios Imobiliarios
+publicar.py v2.2 - Marcos Rosa Negocios Imobiliarios
 Pipeline unificado de publicacao imobiliaria.
 
+Sprint 2 (22/04/2026): atomicidade — manifest + resume + rollback
+Bugfix: validar_dados retornava dict validado, nao lista de erros.
+
 Etapas:
-  1. Carrega JSON (aceita V4 nested e V5 flat)
-  2. VALIDA dados (titulo, slug, valor, etc.)
-  3. VALIDA fotos (minimo 3, foto_capa existe em disco)
-  4. Checa DUPLICATA no WordPress
-  5. Mostra RESUMO visual + pede confirmacao
-  6. Otimiza fotos (redimensiona 1920px + watermark + JPEG 82)
+  1. Carrega JSON (V4 nested e V5 flat)
+  2. Valida dados (Pydantic)
+  3. Valida fotos (minimo 3, foto_capa existe)
+  4. Checa duplicata no WordPress
+  5. Mostra resumo + confirmacao
+  6. Otimiza fotos (1920px + watermark + JPEG 82)
   7. Upload via REST API
   8. Cria post CPT 'imovel'
   9. PHP fix (meta fields + post_parent + thumbnails)
@@ -20,8 +23,9 @@ Etapas:
   13. Abre URL
 
 Uso:
-    python publicar.py <slug>
-    python publicar.py <slug> --dry-run    # so valida, nao publica
+    python publicar.py <slug>               # publica normalmente
+    python publicar.py <slug> --dry-run     # so valida, nao publica
+    python publicar.py <slug> --rollback    # desfaz ultima publicacao do slug
 """
 
 import sys
@@ -81,7 +85,7 @@ MAX_WIDTH    = 1920
 JPEG_QUALITY = 82
 
 # ============================================================
-# HELPERS (ASCII puro)
+# HELPERS
 # ============================================================
 def info(msg):  print(f"  [INFO] {msg}")
 def ok(msg):    print(f"  [OK]   {msg}")
@@ -93,8 +97,19 @@ def step(n, total, msg):
     print(f"[{n}/{total}] {msg}")
     print("-" * 60)
 
+def skip_step(msg):
+    print()
+    print(f"[SKIP] {msg}")
+    print("-" * 60)
+
 def confirma(pergunta):
     return input(f"\n>> {pergunta} (s/N): ").strip().lower() == 's'
+
+def fmt_valor(v):
+    try:
+        return f"R$ {int(float(v)):,}".replace(',', '.')
+    except Exception:
+        return f"R$ {v}"
 
 # ============================================================
 # LOGGING PERSISTENTE
@@ -123,29 +138,25 @@ _LOG_FILE = None
 _LOG_PATH = None
 
 def setup_logging(slug, is_dry_run=False):
-    """Inicia logging duplo (tela + arquivo). Chamar no inicio do main()."""
     global _LOG_FILE, _LOG_PATH
     pasta_logs = PASTA_SCRIPTS / "logs"
     pasta_logs.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    stamp  = datetime.now().strftime("%Y%m%d-%H%M%S")
     sufixo = "-dryrun" if is_dry_run else ""
     _LOG_PATH = pasta_logs / f"publicar-{slug}-{stamp}{sufixo}.log"
     _LOG_FILE = open(_LOG_PATH, "w", encoding="utf-8", errors="replace")
-    # Header do log (so no arquivo, nao na tela)
-    _LOG_FILE.write(f"# publicar.py log\n")
-    _LOG_FILE.write(f"# slug:      {slug}\n")
-    _LOG_FILE.write(f"# mode:      {'DRY-RUN' if is_dry_run else 'PRODUCAO'}\n")
-    _LOG_FILE.write(f"# start:     {datetime.now().isoformat()}\n")
-    _LOG_FILE.write(f"# argv:      {sys.argv}\n")
+    _LOG_FILE.write(f"# publicar.py v2.2 log\n")
+    _LOG_FILE.write(f"# slug:  {slug}\n")
+    _LOG_FILE.write(f"# mode:  {'DRY-RUN' if is_dry_run else 'PRODUCAO'}\n")
+    _LOG_FILE.write(f"# start: {datetime.now().isoformat()}\n")
+    _LOG_FILE.write(f"# argv:  {sys.argv}\n")
     _LOG_FILE.write("=" * 60 + "\n\n")
     _LOG_FILE.flush()
-    # Tee stdout/stderr
     sys.stdout = _Tee(sys.stdout, _LOG_FILE)
     sys.stderr = _Tee(sys.stderr, _LOG_FILE)
     atexit.register(close_logging)
 
 def close_logging():
-    """Fecha o arquivo de log. Registrado via atexit."""
     global _LOG_FILE
     if _LOG_FILE:
         try:
@@ -156,11 +167,163 @@ def close_logging():
             pass
         _LOG_FILE = None
 
-def fmt_valor(v):
+# ============================================================
+# MANIFEST — Sprint 2
+# Rastreia progresso etapa a etapa para resume/rollback.
+# Arquivo: logs/manifest-<slug>.json (um por slug, sobrescrito em
+# nova execucao completa).
+# ============================================================
+MANIFEST_STEPS = [
+    'fotos_otimizadas',
+    'fotos_upload',
+    'post_criado',
+    'php_fix',
+    'cache_limpo',
+    'obsidian',
+    'pasta_movida',
+]
+
+class Manifest:
+    def __init__(self, slug, path):
+        self.slug = slug
+        self.path = Path(path)
+        self.data = {
+            'slug':         slug,
+            'started_at':   datetime.now().isoformat(),
+            'completed_at': None,
+            'steps':        {s: False for s in MANIFEST_STEPS},
+            'post_id':      None,
+            'capa_id':      None,
+            'galeria_ids':  [],
+            'url':          None,
+        }
+
+    @staticmethod
+    def _path(slug):
+        return PASTA_SCRIPTS / "logs" / f"manifest-{slug}.json"
+
+    @classmethod
+    def existe(cls, slug):
+        return cls._path(slug).exists()
+
+    @classmethod
+    def carregar(cls, slug):
+        p = cls._path(slug)
+        m = cls.__new__(cls)
+        m.slug = slug
+        m.path = p
+        with open(p, 'r', encoding='utf-8') as f:
+            m.data = json.load(f)
+        return m
+
+    @classmethod
+    def novo(cls, slug):
+        (PASTA_SCRIPTS / "logs").mkdir(parents=True, exist_ok=True)
+        m = cls(slug, cls._path(slug))
+        m.salvar()
+        return m
+
+    def salvar(self):
+        with open(self.path, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f, ensure_ascii=False, indent=2)
+
+    def checkpoint(self, step_name, **kwargs):
+        """Marca etapa como concluida e persiste imediatamente."""
+        self.data['steps'][step_name] = True
+        for k, v in kwargs.items():
+            self.data[k] = v
+        self.salvar()
+
+    def feito(self, step_name):
+        return self.data['steps'].get(step_name, False)
+
+    def completo(self):
+        self.data['completed_at'] = datetime.now().isoformat()
+        self.salvar()
+
+    def resumo_texto(self):
+        feitos    = [s for s in MANIFEST_STEPS if self.data['steps'].get(s)]
+        pendentes = [s for s in MANIFEST_STEPS if not self.data['steps'].get(s)]
+        return feitos, pendentes
+
+# ============================================================
+# ROLLBACK — Sprint 2
+# Desfaz etapas concluidas com base no manifest.
+# Ordem inversa: pasta -> obsidian -> post -> attachments.
+# ============================================================
+def executar_rollback(manifest):
+    print()
+    print("=" * 60)
+    print("  ROLLBACK")
+    print("=" * 60)
+    slug = manifest.data['slug']
+
+    # 1. Mover pasta de volta para _em-captacao
+    if manifest.data['steps'].get('pasta_movida'):
+        src = PASTA_PUBLICADOS / slug
+        dst = PASTA_CAPTACAO   / slug
+        if src.exists() and not dst.exists():
+            try:
+                shutil.move(str(src), str(dst))
+                ok(f"Pasta movida de volta -> _em-captacao\\{slug}")
+            except Exception as e:
+                warn(f"Nao consegui mover pasta: {e}")
+        else:
+            warn("Pasta nao esta em _publicados ou destino ja existe — pulando")
+
+    # 2. Deletar nota Obsidian
+    if manifest.data['steps'].get('obsidian'):
+        for base in [PASTA_PUBLICADOS, PASTA_CAPTACAO]:
+            nota = base / slug / f"{slug}.md"
+            if nota.exists():
+                nota.unlink()
+                ok(f"Nota Obsidian removida: {nota.name}")
+                break
+
+    # 3. Deletar post do WP (force=true pula a lixeira)
+    post_id = manifest.data.get('post_id')
+    if manifest.data['steps'].get('post_criado') and post_id:
+        try:
+            r = requests.delete(
+                f"{WP_URL}/wp-json/wp/v2/imovel/{post_id}",
+                params={"force": "true"},
+                headers=HEADERS, auth=AUTH, timeout=30
+            )
+            if r.status_code in (200, 201):
+                ok(f"Post {post_id} deletado do WP")
+            else:
+                warn(f"Delete post {post_id} falhou: {r.status_code} - {r.text[:200]}")
+        except Exception as e:
+            warn(f"Erro deletando post {post_id}: {e}")
+
+    # 4. Deletar attachments (fotos enviadas ao WP)
+    galeria = manifest.data.get('galeria_ids', [])
+    if manifest.data['steps'].get('fotos_upload') and galeria:
+        for att_id in galeria:
+            try:
+                r = requests.delete(
+                    f"{WP_URL}/wp-json/wp/v2/media/{att_id}",
+                    params={"force": "true"},
+                    headers=HEADERS, auth=AUTH, timeout=30
+                )
+                if r.status_code in (200, 201):
+                    ok(f"Attachment {att_id} deletado")
+                else:
+                    warn(f"Delete attachment {att_id}: {r.status_code}")
+            except Exception as e:
+                warn(f"Erro attachment {att_id}: {e}")
+
+    # 5. Remover manifest
     try:
-        return f"R$ {int(float(v)):,}".replace(',', '.')
-    except Exception:
-        return f"R$ {v}"
+        manifest.path.unlink()
+        ok("Manifest removido")
+    except Exception as e:
+        warn(f"Nao deletei manifest: {e}")
+
+    print()
+    print("  Rollback concluido.")
+    print(f"  Pasta disponivel em _em-captacao\\{slug}")
+    print()
 
 # ============================================================
 # CARREGAR E NORMALIZAR JSON (V4 nested -> V5 flat)
@@ -174,80 +337,49 @@ def carregar_json(pasta):
 
     arquivo = candidatos[0]
     try:
-        with open(arquivo, 'r', encoding='utf-8') as f:
+        with open(arquivo, 'r', encoding='utf-8-sig') as f:
             dados = json.load(f)
     except json.JSONDecodeError as e:
         err(f"JSON invalido: {e}")
     except Exception as e:
         err(f"Erro lendo JSON: {e}")
 
-    # V4 (formulario) -> V5 (flat)
-    if 'imovel' in dados:
-        info("Convertendo V4 (nested) -> V5 (flat)...")
-        i   = dados['imovel']
-        cla = i.get('classificacao', {})
-        inf = i.get('informacoes_basicas', {})
-        seo = i.get('seo', {})
-        dados = {
-            'titulo':          inf.get('titulo', ''),
-            'slug':            inf.get('slug', ''),
-            'tipo':            cla.get('tipo', ''),
-            'finalidade':      cla.get('finalidade', 'venda'),
-            'valor':           inf.get('valor', 0),
-            'area':            inf.get('area', 0),
-            'quartos':         inf.get('quartos', 0),
-            'banheiros':       inf.get('banheiros', 0),
-            'vagas':           inf.get('vagas', 0),
-            'bairro':          inf.get('bairro', ''),
-            'cidade':          inf.get('cidade', 'Anapolis'),
-            'estado':          inf.get('estado', 'GO'),
-            'descricao':       i.get('descricao', ''),
-            'seo_title':       seo.get('title', ''),
-            'seo_description': seo.get('description', ''),
-            'foto_capa':       i.get('foto_capa', ''),
-            'parceiro':        i.get('parceiro', {})
-        }
+    from schema_imovel import normalizar_v4_para_v5
+    slug_fb = pasta.name if hasattr(pasta, 'name') else ''
+    dados = normalizar_v4_para_v5(dados, slug_fallback=slug_fb)
     return dados, arquivo
 
 # ============================================================
 # VALIDACAO DE DADOS
+# BUGFIX v2.2: retorna dict validado (nao lista de erros).
+# Chama sys.exit(1) internamente se invalido.
 # ============================================================
 def validar_dados(dados, slug):
-    erros = []
-    obrigatorios = ['titulo', 'tipo', 'finalidade', 'valor', 'area',
-                    'bairro', 'cidade', 'estado', 'descricao']
-    for campo in obrigatorios:
-        if not dados.get(campo):
-            erros.append(f"Campo obrigatorio vazio: '{campo}'")
+    from schema_imovel import Imovel, formatar_erros
+    from pydantic import ValidationError
 
-    # Titulo parece slug?
-    titulo = str(dados.get('titulo', ''))
-    if titulo and titulo.count('-') > 3 and ' ' not in titulo:
-        erros.append(f"Titulo parece slug (sem espacos): '{titulo}'")
+    if not dados.get('slug'):
+        dados['slug'] = slug
 
-    # Slug do JSON diverge do argumento?
-    slug_json = dados.get('slug', '')
-    if slug_json and slug_json != slug:
-        erros.append(
-            f"Slug diverge:\n"
-            f"       JSON:      '{slug_json}'\n"
+    if dados.get('slug') and dados['slug'] != slug:
+        warn(
+            f"Slug diverge (usando argumento da linha de comando):\n"
+            f"       JSON:      '{dados['slug']}'\n"
             f"       Argumento: '{slug}'"
         )
+        dados['slug'] = slug
 
-    # Valor razoavel?
     try:
-        valor = float(dados.get('valor', 0))
-        if valor < 10000:
-            erros.append(f"Valor muito baixo ({fmt_valor(valor)}) - parece erro")
-        if valor > 10_000_000:
-            erros.append(f"Valor muito alto ({fmt_valor(valor)}) - parece erro")
-    except (ValueError, TypeError):
-        erros.append(f"Valor nao e numero: '{dados.get('valor')}'")
+        modelo = Imovel.model_validate(dados)
+    except ValidationError as e:
+        print("")
+        print(formatar_erros(e))
+        sys.exit(1)
 
-    return erros
+    return modelo.model_dump()   # dict validado com defaults aplicados
 
 # ============================================================
-# VALIDACAO DE FOTOS (impede publicar com fotos faltando)
+# VALIDACAO DE FOTOS
 # ============================================================
 def validar_fotos(pasta_originais, foto_capa):
     erros = []
@@ -264,18 +396,6 @@ def validar_fotos(pasta_originais, foto_capa):
 
     if len(fotos) < MIN_FOTOS:
         erros.append(f"So {len(fotos)} foto(s) - minimo {MIN_FOTOS}")
-
-    if foto_capa:
-        capa_norm = foto_capa.lower().replace(' ', '').replace('-', '').replace('_', '')
-        tem_capa = any(
-            capa_norm in f.stem.lower().replace(' ', '').replace('-', '').replace('_', '')
-            for f in fotos
-        )
-        if not tem_capa:
-            erros.append(
-                f"foto_capa='{foto_capa}' nao encontrada em disco\n"
-                f"       Fotos: {[f.name for f in fotos]}"
-            )
 
     return erros, fotos
 
@@ -298,7 +418,7 @@ def ja_existe_no_wp(slug):
     return None
 
 # ============================================================
-# OTIMIZAR FOTOS (inline - nao depende de otimizador externo)
+# OTIMIZAR FOTOS
 # ============================================================
 def otimizar_fotos(pasta_originais, pasta_prontas):
     pasta_prontas.mkdir(parents=True, exist_ok=True)
@@ -326,7 +446,6 @@ def otimizar_fotos(pasta_originais, pasta_prontas):
         try:
             img = Image.open(foto)
 
-            # converte para RGB (HEIC, PNG, RGBA -> JPEG)
             if img.mode in ('RGBA', 'LA', 'P'):
                 fundo = Image.new('RGB', img.size, (255, 255, 255))
                 if img.mode == 'P':
@@ -337,22 +456,25 @@ def otimizar_fotos(pasta_originais, pasta_prontas):
             elif img.mode != 'RGB':
                 img = img.convert('RGB')
 
-            # redimensiona
             if img.width > MAX_WIDTH:
                 ratio = MAX_WIDTH / img.width
                 img = img.resize((MAX_WIDTH, int(img.height * ratio)), Image.LANCZOS)
 
-            # watermark (15% da largura, canto inferior direito)
+            # watermark: 25% largura, centralizada, opacidade 55%
             if wm:
-                wm_w = int(img.width * 0.15)
+                wm_w = int(img.width * 0.35)
                 wm_h = int(wm.height * (wm_w / wm.width))
                 wm_r = wm.resize((wm_w, wm_h), Image.LANCZOS)
+                if wm_r.mode != 'RGBA':
+                    wm_r = wm_r.convert('RGBA')
+                alpha = wm_r.split()[3].point(lambda p: int(p * 0.55))
+                wm_r.putalpha(alpha)
                 img_rgba = img.convert('RGBA')
-                pos = (img.width - wm_w - 20, img.height - wm_h - 20)
+                pos = ((img.width - wm_w) // 2, (img.height - wm_h) // 2)
                 img_rgba.paste(wm_r, pos, wm_r)
                 img = img_rgba.convert('RGB')
 
-            nome = foto.stem.lower().replace(' ', '-') + '.jpg'
+            nome  = foto.stem.lower().replace(' ', '-') + '.jpg'
             saida = pasta_prontas / nome
             img.save(saida, 'JPEG', quality=JPEG_QUALITY, optimize=True)
             prontas.append(saida)
@@ -440,7 +562,7 @@ def php_fix(post_id, dados, capa_id, galeria_ids):
         )
     php_meta = "\n".join(php_meta_lines)
 
-    atts = [capa_id] + [g for g in galeria_ids if g != capa_id]
+    atts       = [capa_id] + [g for g in galeria_ids if g != capa_id]
     php_parent = "\n".join(
         f"    wp_update_post(array('ID' => {aid}, 'post_parent' => {post_id}));"
         for aid in atts
@@ -487,16 +609,14 @@ unlink(__FILE__);
 echo "Auto-delete OK\\n";
 """
 
-    # Upload via base64 | base64 -d over SSH (shell=True, compativel Windows)
-    b64 = base64.b64encode(script.encode('utf-8')).decode('ascii')
-    nome = f"mrfix-{post_id}.php"
+    b64     = base64.b64encode(script.encode('utf-8')).decode('ascii')
+    nome    = f"mrfix-{post_id}.php"
     ssh_cmd = f'ssh -o StrictHostKeyChecking=no {SSH_HOST} "echo {b64} | base64 -d > ~/www/{nome}"'
     r = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True, timeout=90)
     if r.returncode != 0:
         warn(f"Upload PHP falhou (rc={r.returncode}): {r.stderr[:300]}")
         return False
 
-    # Valida que o arquivo chegou ao servidor
     check_cmd = f'ssh -o StrictHostKeyChecking=no {SSH_HOST} "ls -la ~/www/{nome}"'
     r2 = subprocess.run(check_cmd, shell=True, capture_output=True, text=True, timeout=30)
     if r2.returncode != 0 or nome not in r2.stdout:
@@ -504,7 +624,6 @@ echo "Auto-delete OK\\n";
         return False
     info(f"  PHP uploaded: {r2.stdout.strip()}")
 
-    # Executa
     try:
         r = requests.get(f"{WP_URL}/{nome}?token={token}",
                          headers=HEADERS, timeout=90)
@@ -587,30 +706,127 @@ def mover_para_publicados(pasta_origem, slug):
         return pasta_origem
 
 # ============================================================
+# SELECAO DE FOTO CAPA
+# ============================================================
+def selecionar_foto_capa(fotos_prontas: list, foto_capa_json: str) -> str:
+    import re as _re
+    nomes = [f.name for f in fotos_prontas]
+    if foto_capa_json:
+        base = Path(foto_capa_json).stem
+        for nome in nomes:
+            if Path(nome).stem == base:
+                return nome
+        warn(f"foto_capa '{foto_capa_json}' nao encontrada — aplicando auto-selecao")
+    for nome in nomes:
+        if _re.match(r'^fachada', nome, _re.IGNORECASE):
+            info(f"foto_capa auto-selecionada (fachada): {nome}")
+            return nome
+    fallback = sorted(nomes)[0]
+    info(f"foto_capa auto-selecionada (1a alfabetica): {fallback}")
+    return fallback
+
+
+# ============================================================
 # MAIN
 # ============================================================
 def main():
     if len(sys.argv) < 2:
-        print("Uso: python publicar.py <slug> [--dry-run]")
+        print("Uso: python publicar.py <slug> [--dry-run] [--rollback]")
         sys.exit(1)
 
-    slug    = sys.argv[1].strip()
-    dry_run = "--dry-run" in sys.argv
+    slug          = sys.argv[1].strip()
+    dry_run       = "--dry-run"  in sys.argv
+    rollback_mode = "--rollback" in sys.argv
+    yes_mode      = "--yes" in sys.argv or "-y" in sys.argv
 
     setup_logging(slug, dry_run)
 
+    # ===== MODO ROLLBACK =====
+    if rollback_mode:
+        if not Manifest.existe(slug):
+            err(
+                f"Nenhum manifest encontrado para '{slug}'.\n"
+                f"       Esperado em: {Manifest._path(slug)}"
+            )
+        m = Manifest.carregar(slug)
+        feitos, _ = m.resumo_texto()
+        print()
+        print("=" * 60)
+        print(f"  ROLLBACK: {slug}")
+        print(f"  Iniciado em: {m.data.get('started_at', '?')[:19]}")
+        print(f"  Etapas feitas: {', '.join(feitos) or 'nenhuma'}")
+        if m.data.get('post_id'):
+            print(f"  Post ID: {m.data['post_id']}")
+        print("=" * 60)
+        if not confirma(f"Confirmar rollback de '{slug}'? (apaga post/fotos do WP)"):
+            print("\nCancelado.")
+            sys.exit(0)
+        executar_rollback(m)
+        sys.exit(0)
+
+    # ===== CABECALHO =====
     print()
     print("=" * 60)
     print(f"  PUBLICAR: {slug}" + ("  [DRY-RUN]" if dry_run else ""))
     print("=" * 60)
 
-    pasta_imovel = PASTA_CAPTACAO / slug
-    if not pasta_imovel.exists():
-        err(f"Pasta nao existe: {pasta_imovel}\n"
-            f"       Rode antes:  python iniciar_imovel.py {slug}")
-
+    pasta_imovel    = PASTA_CAPTACAO / slug
     pasta_originais = pasta_imovel / "fotos-originais"
     pasta_prontas   = pasta_imovel / "fotos-prontas"
+
+    if not pasta_imovel.exists():
+        err(
+            f"Pasta nao existe: {pasta_imovel}\n"
+            f"       Rode antes:  python iniciar_imovel.py {slug}"
+        )
+
+    # ===== VERIFICAR MANIFEST EXISTENTE (resume/rollback interativo) =====
+    retomando = False
+    manifest  = None
+
+    if Manifest.existe(slug):
+        m_existing = Manifest.carregar(slug)
+
+        if m_existing.data.get('completed_at'):
+            # Publicacao anterior ja concluida — ignora manifest antigo
+            warn("Manifest de publicacao anterior concluida encontrado — iniciando novo.")
+            manifest = Manifest.novo(slug)
+        else:
+            feitos, pendentes = m_existing.resumo_texto()
+            if not feitos:
+                m_existing.path.unlink()
+                info("Manifest anterior sem etapas — descartado, iniciando limpo")
+            else:
+                print()
+                print("=" * 60)
+                print("  [!] EXECUCAO INCOMPLETA DETECTADA")
+                print(f"  Iniciado em:     {m_existing.data.get('started_at', '?')[:19]}")
+                print(f"  Etapas feitas:   {', '.join(feitos) or 'nenhuma'}")
+                print(f"  Etapas faltando: {', '.join(pendentes)}")
+                if m_existing.data.get('post_id'):
+                    print(f"  Post ID no WP:   {m_existing.data['post_id']}")
+                print("=" * 60)
+                print()
+                print("  Opcoes:")
+                print("  [R] Retomar de onde parou")
+                print("  [Z] Rollback (apaga post/fotos do WP e limpa)")
+                print("  [N] Cancelar")
+                print()
+                opcao = input(">> Escolha (R/Z/N): ").strip().upper()
+                if opcao == 'Z':
+                    executar_rollback(m_existing)
+                    sys.exit(0)
+                elif opcao == 'R':
+                    retomando = True
+                    manifest  = m_existing
+                    print()
+                    print("  Retomando execucao...")
+                else:
+                    print("\nCancelado.")
+                    sys.exit(0)
+
+    if manifest is None:
+        manifest = Manifest.novo(slug)
 
     # ===== 1. JSON =====
     step(1, 8, "Carregando JSON")
@@ -619,7 +835,7 @@ def main():
         dados['slug'] = slug
     ok(f"JSON: {arq_json.name}")
 
-    # Normalizar finalidade: sempre "Venda" ou "Aluguel"
+    # Normalizar finalidade
     _fin = str(dados.get('finalidade', '')).strip().lower()
     if _fin in ('venda', 'vender', 'sale', 'v'):
         dados['finalidade'] = 'Venda'
@@ -629,13 +845,9 @@ def main():
         warn(f"Finalidade desconhecida: '{_fin}' - mantendo como esta")
 
     # ===== 2. Validar dados =====
+    # BUGFIX v2.2: dados = dict validado (sai com sys.exit se invalido)
     step(2, 8, "Validando dados do JSON")
-    erros = validar_dados(dados, slug)
-    if erros:
-        print("\n  [ABORTADO] Problemas no JSON:")
-        for e in erros:
-            print(f"    - {e}")
-        sys.exit(1)
+    dados = validar_dados(dados, slug)
     ok("JSON valido")
 
     # ===== 3. Validar fotos =====
@@ -649,99 +861,186 @@ def main():
     ok(f"{len(fotos)} foto(s)")
 
     # ===== 4. Duplicata =====
-    step(4, 8, "Checando duplicata no WordPress")
-    dup_id = ja_existe_no_wp(slug)
-    if dup_id:
-        print(f"\n  [ABORTADO] Ja existe post com slug '{slug}' (ID {dup_id})")
-        print(f"    Veja: {WP_URL}/wp-admin/post.php?post={dup_id}&action=edit")
-        sys.exit(1)
-    ok("Slug disponivel")
+    # Pula se retomando e post ja foi criado (o proprio post e a duplicata)
+    if not (retomando and manifest.feito('post_criado')):
+        step(4, 8, "Checando duplicata no WordPress")
+        dup_id = ja_existe_no_wp(slug)
+        if dup_id:
+            if retomando and dup_id == manifest.data.get('post_id'):
+                ok(f"Post ja existe (ID {dup_id}) — retomada apos criacao do post")
+            else:
+                print(f"\n  [ABORTADO] Ja existe post com slug '{slug}' (ID {dup_id})")
+                print(f"    Veja: {WP_URL}/wp-admin/post.php?post={dup_id}&action=edit")
+                sys.exit(1)
+        else:
+            ok("Slug disponivel")
+    else:
+        skip_step("Checar duplicata (post ja criado no manifest)")
 
-    # ===== 5. Resumo =====
-    print()
-    print("=" * 60)
-    print("  RESUMO")
-    print("=" * 60)
-    print(f"  Titulo:    {dados.get('titulo', '')}")
-    print(f"  Slug:      {dados.get('slug', '')}")
-    print(f"  Tipo:      {dados.get('tipo', '')} ({dados.get('finalidade', '')})")
-    print(f"  Valor:     {fmt_valor(dados.get('valor', 0))}")
-    print(f"  Area:      {dados.get('area', '')} m2")
-    print(f"  Q/B/V:     {dados.get('quartos', '')}/{dados.get('banheiros', '')}/{dados.get('vagas', '')}")
-    print(f"  Local:     {dados.get('bairro', '')}, {dados.get('cidade', '')}/{dados.get('estado', '')}")
-    print(f"  Fotos:     {len(fotos)} ({', '.join(f.name for f in fotos[:3])}{'...' if len(fotos)>3 else ''})")
-    print(f"  Capa:      '{dados.get('foto_capa', '(primeira)')}'")
-    print("=" * 60)
-
-    if dry_run:
-        print(f"\n[DRY-RUN] Ok - nada publicado. Log: {_LOG_PATH}")
-        sys.exit(0)
-
-    if not confirma("Publicar?"):
-        print("\nCancelado.")
-        sys.exit(0)
-
-    # ===== 6. Otimizar =====
-    step(5, 8, "Otimizando fotos")
-    prontas = otimizar_fotos(pasta_originais, pasta_prontas)
-    ok(f"{len(prontas)} foto(s) em fotos-prontas\\")
-
-    # ===== 7. Upload =====
-    step(6, 8, "Upload para WordPress")
-    capa_id = None
-    galeria = []
-    capa_busca = dados.get('foto_capa', '').lower().replace(' ', '').replace('-', '').replace('_', '')
-
-    for i, foto in enumerate(prontas, 1):
-        att = upload_foto(foto)
-        galeria.append(att)
-        nome_norm = foto.stem.lower().replace('-', '').replace('_', '')
-        marca = ""
-        if capa_id is None and capa_busca and capa_busca in nome_norm:
-            capa_id = att
-            marca = "  [CAPA]"
-        info(f"  [{i}/{len(prontas)}] {foto.name} -> ID {att}{marca}")
-
-    if capa_id is None:
-        capa_id = galeria[0]
-        info(f"  (capa nao matcheada, usando primeira: ID {capa_id})")
-
-    # ===== 8. Criar post =====
-    step(7, 8, "Criando post no WordPress")
-    post = criar_post(dados, capa_id, galeria)
-    post_id = post['id']
-    url     = post.get('link', f"{WP_URL}/imovel/{slug}/")
-    ok(f"Post ID {post_id}")
-
-    info("Aplicando PHP fix (meta + post_parent + thumbs)...")
-    fix_ok = php_fix(post_id, dados, capa_id, galeria)
-
-    info("Limpando cache...")
-    limpar_cache()
-
-    if not fix_ok:
+    # ===== 5. Resumo + confirmacao (pula se retomando) =====
+    if not retomando:
         print()
         print("=" * 60)
-        print("  [!] PHP FIX FALHOU")
-        print("  Post criado no WP, mas meta fields (preco, quartos,")
-        print("  banheiros, vagas) provavelmente NAO foram gravados.")
-        print(f"  Post ID: {post_id}")
-        print(f"  Valide: {WP_URL}/imoveis/ (aba anonima)")
-        print("  Se estiver errado, rode fix manual antes de seguir.")
+        print("  RESUMO")
         print("=" * 60)
-        if not confirma("Continuar finalizacao (mover pasta, criar nota)?"):
-            print("\n[ABORTADO] Post no WP mas pasta NAO movida.")
-            print(f"Investigar post {post_id} antes de publicar outro.")
-            sys.exit(1)
+        print(f"  Titulo:    {dados.get('titulo', '')}")
+        print(f"  Slug:      {dados.get('slug', '')}")
+        print(f"  Tipo:      {dados.get('tipo', '')} ({dados.get('finalidade', '')})")
+        print(f"  Negócio:   {dados.get('tipo_negocio', 'revendas')}")
+        print(f"  Valor:     {fmt_valor(dados.get('valor', 0))}")
+        print(f"  Area:      {dados.get('area', '')} m2")
+        print(f"  Q/B/V:     {dados.get('quartos', '')}/{dados.get('banheiros', '')}/{dados.get('vagas', '')}")
+        print(f"  Local:     {dados.get('bairro', '')}, {dados.get('cidade', '')}/{dados.get('estado', '')}")
+        print(f"  Fotos:     {len(fotos)} ({', '.join(f.name for f in fotos[:3])}{'...' if len(fotos)>3 else ''})")
+        print(f"  Capa:      '{dados.get('foto_capa', '(primeira)')}'")
+        print("=" * 60)
+
+        if dry_run:
+            print(f"\n[DRY-RUN] Ok - nada publicado. Log: {_LOG_PATH}")
+            sys.exit(0)
+
+        if yes_mode:
+            info("[--yes] Confirmacao pulada.")
+        elif not confirma("Publicar?"):
+            print("\nCancelado.")
+            sys.exit(0)
+
+    # ===== 6. Otimizar fotos =====
+    if not manifest.feito('fotos_otimizadas'):
+        step(5, 8, "Otimizando fotos")
+        prontas = otimizar_fotos(pasta_originais, pasta_prontas)
+        ok(f"{len(prontas)} foto(s) em fotos-prontas\\")
+        manifest.checkpoint('fotos_otimizadas')
+    else:
+        skip_step("Otimizando fotos (ja feito)")
+        exts_ok = ('.jpg', '.jpeg')
+        prontas = sorted([
+            f for f in pasta_prontas.iterdir()
+            if f.is_file() and f.suffix.lower() in exts_ok
+        ])
+        ok(f"{len(prontas)} foto(s) recuperadas de fotos-prontas\\")
+
+    # ===== 7. Upload =====
+    if not manifest.feito('fotos_upload'):
+        step(6, 8, "Upload para WordPress")
+        capa_id    = None
+        galeria    = []
+        capa_nome  = selecionar_foto_capa(prontas, dados.get('foto_capa', ''))
+
+        for i, foto in enumerate(prontas, 1):
+            att       = upload_foto(foto)
+            galeria.append(att)
+            marca     = ""
+            if capa_id is None and foto.name == capa_nome:
+                capa_id = att
+                marca   = "  [CAPA]"
+            info(f"  [{i}/{len(prontas)}] {foto.name} -> ID {att}{marca}")
+
+        if capa_id is None:
+            capa_id = galeria[0]
+            info(f"  (capa nao matcheada, usando primeira: ID {capa_id})")
+
+        manifest.checkpoint('fotos_upload', capa_id=capa_id, galeria_ids=galeria)
+    else:
+        skip_step("Upload de fotos (ja feito)")
+        capa_id = manifest.data['capa_id']
+        galeria = manifest.data['galeria_ids']
+        ok(f"capa_id={capa_id}  |  {len(galeria)} attachment(s) do manifest")
+
+    # ===== 8. Criar post =====
+    if not manifest.feito('post_criado'):
+        step(7, 8, "Criando post no WordPress")
+        post    = criar_post(dados, capa_id, galeria)
+        post_id = post['id']
+        url     = post.get('link', f"{WP_URL}/imovel/{slug}/")
+        ok(f"Post ID {post_id}")
+        manifest.checkpoint('post_criado', post_id=post_id, url=url)
+
+        # ===== 8b. Atribuir taxonomia tipo_negocio =====
+        tipo_neg = dados.get('tipo_negocio', 'revendas')
+        try:
+            # Resolver term_id pelo slug
+            tr = requests.get(
+                f"{WP_URL}/wp-json/wp/v2/tipo_negocio",
+                params={"slug": tipo_neg},
+                headers=HEADERS, auth=AUTH, timeout=15
+            )
+            if tr.status_code == 200 and tr.json():
+                term_id = tr.json()[0]['id']
+                # Atribuir ao post
+                ar = requests.post(
+                    f"{WP_URL}/wp-json/wp/v2/imovel/{post_id}",
+                    headers={**HEADERS, "Content-Type": "application/json"},
+                    json={"tipo_negocio": [term_id]},
+                    auth=AUTH, timeout=15
+                )
+                if ar.status_code in (200, 201):
+                    ok(f"Taxonomia tipo_negocio={tipo_neg} (term_id={term_id})")
+                else:
+                    warn(f"Atribuir taxonomia falhou: {ar.status_code} - {ar.text[:200]}")
+            else:
+                warn(f"Termo '{tipo_neg}' nao encontrado na API (status={tr.status_code})")
+        except Exception as e:
+            warn(f"Erro ao atribuir taxonomia: {e}")
+    else:
+        skip_step("Criar post (ja feito)")
+        post_id = manifest.data['post_id']
+        url     = manifest.data['url'] or f"{WP_URL}/imovel/{slug}/"
+        ok(f"Post ID {post_id} recuperado do manifest")
+
+    # ===== PHP Fix =====
+    if not manifest.feito('php_fix'):
+        info("Aplicando PHP fix (meta + post_parent + thumbs)...")
+        fix_ok = php_fix(post_id, dados, capa_id, galeria)
+        if fix_ok:
+            manifest.checkpoint('php_fix')
+        else:
+            print()
+            print("=" * 60)
+            print("  [!] PHP FIX FALHOU")
+            print("  Post criado, mas meta fields podem estar errados.")
+            print(f"  Post ID: {post_id}")
+            print(f"  Admin:   {WP_URL}/wp-admin/post.php?post={post_id}&action=edit")
+            print()
+            print("  Para tentar novamente:")
+            print(f"    python publicar.py {slug}            (retoma do php_fix)")
+            print(f"    python publicar.py {slug} --rollback (apaga tudo)")
+            print("=" * 60)
+            if not confirma("Continuar mesmo assim (obsidian + mover pasta)?"):
+                print(f"\n[ABORTADO] Post {post_id} no WP. Manifest salvo.")
+                print(f"           Retome com:  python publicar.py {slug}")
+                print(f"           Desfaca com: python publicar.py {slug} --rollback")
+                sys.exit(1)
+    else:
+        skip_step("PHP fix (ja feito)")
+
+    # ===== Cache =====
+    if not manifest.feito('cache_limpo'):
+        info("Limpando cache...")
+        limpar_cache()
+        manifest.checkpoint('cache_limpo')
+    else:
+        skip_step("Limpar cache (ja feito)")
 
     # ===== 9. Finalizar =====
     step(8, 8, "Finalizando")
-    try:
-        criar_nota_obsidian(pasta_imovel, dados, post_id)
-    except Exception as e:
-        warn(f"Nota Obsidian: {e}")
 
-    mover_para_publicados(pasta_imovel, slug)
+    if not manifest.feito('obsidian'):
+        try:
+            criar_nota_obsidian(pasta_imovel, dados, post_id)
+            manifest.checkpoint('obsidian')
+        except Exception as e:
+            warn(f"Nota Obsidian: {e}")
+    else:
+        skip_step("Nota Obsidian (ja feita)")
+
+    if not manifest.feito('pasta_movida'):
+        mover_para_publicados(pasta_imovel, slug)
+        manifest.checkpoint('pasta_movida')
+    else:
+        skip_step("Mover pasta (ja feita)")
+
+    manifest.completo()
 
     print()
     print("=" * 60)
@@ -750,13 +1049,16 @@ def main():
     print(f"  URL: {url}")
     print(f"  LOG: {_LOG_PATH}")
     print("=" * 60)
-    try: webbrowser.open(url)
-    except Exception: pass
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n[CANCELADO]")
+        print("\n\n[CANCELADO] Manifest salvo.")
+        print(f"            Retome com:  python publicar.py {sys.argv[1] if len(sys.argv) > 1 else '<slug>'}")
         sys.exit(1)

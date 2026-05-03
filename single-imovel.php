@@ -741,6 +741,79 @@ get_header();
 })();
 </script>
 
+<?php
+// ─── SCHEMA.ORG JSON-LD ─────────────────────────────────────
+$schema_images = [];
+if ($thumb_url) $schema_images[] = $thumb_url;
+if (!empty($fotos)) {
+    foreach ($fotos as $foto) {
+        $src = wp_get_attachment_image_src($foto->ID, 'full');
+        if ($src && $src[0] !== $thumb_url) $schema_images[] = $src[0];
+    }
+}
+
+$schema_desc = wp_strip_all_tags(get_the_excerpt() ?: get_the_content());
+$schema_desc = mb_substr($schema_desc, 0, 500);
+
+// Valor numérico limpo para Schema
+$schema_price = '';
+if ($valor) {
+    $schema_price = preg_replace('/[^0-9]/', '', $valor);
+}
+?>
+
+<!-- BreadcrumbList -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Início", "item": "<?php echo esc_url(home_url('/')); ?>"},
+    {"@type": "ListItem", "position": 2, "name": "Imóveis", "item": "<?php echo esc_url(home_url('/imoveis/')); ?>"},
+    {"@type": "ListItem", "position": 3, "name": "<?php echo esc_attr(get_the_title()); ?>"}
+  ]
+}
+</script>
+
+<!-- RealEstateListing -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "RealEstateListing",
+  "name": "<?php echo esc_attr(get_the_title()); ?>",
+  "description": "<?php echo esc_attr($schema_desc); ?>",
+  "url": "<?php the_permalink(); ?>",
+  "datePosted": "<?php echo get_the_date('c'); ?>"<?php if (!empty($schema_images)) : ?>,
+  "image": <?php echo json_encode(array_values($schema_images), JSON_UNESCAPED_SLASHES); ?><?php endif; ?><?php if ($bairro) : ?>,
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "<?php echo esc_attr($bairro); ?>",
+    "addressRegion": "GO",
+    "addressCountry": "BR"
+  }<?php endif; ?><?php if ($schema_price) : ?>,
+  "offers": {
+    "@type": "Offer",
+    "price": "<?php echo esc_attr($schema_price); ?>",
+    "priceCurrency": "BRL",
+    "availability": "https://schema.org/InStock"
+  }<?php endif; ?><?php if ($quartos) : ?>,
+  "numberOfRooms": <?php echo absint($quartos); ?><?php endif; ?><?php if ($banheiros) : ?>,
+  "numberOfBathroomsTotal": <?php echo absint($banheiros); ?><?php endif; ?><?php if ($area) : ?>,
+  "floorSize": {
+    "@type": "QuantitativeValue",
+    "value": "<?php echo esc_attr($area); ?>",
+    "unitCode": "MTK"
+  }<?php endif; ?>,
+  "broker": {
+    "@type": "RealEstateAgent",
+    "name": "Marcos Rosa Campos",
+    "telephone": "+5562981148448",
+    "url": "https://imovflow.com.br/",
+    "identifier": "CRECI-GO 35088-F"
+  }
+}
+</script>
+
 <?php endwhile; ?>
 
 <?php get_footer(); ?>

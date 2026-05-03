@@ -6,10 +6,10 @@
 
 get_header();
 
-// Sanitize and validate the 'finalidade' filter
-$finalidade_raw   = isset( $_GET['finalidade'] ) ? sanitize_text_field( wp_unslash( $_GET['finalidade'] ) ) : '';
-$allowed_finalidades = array( 'Venda', 'Aluguel' );
-$finalidade = in_array( $finalidade_raw, $allowed_finalidades, true ) ? $finalidade_raw : '';
+// Sanitize and validate the 'tipo_negocio' filter
+$tipo_negocio_raw = isset( $_GET['tipo_negocio'] ) ? sanitize_text_field( wp_unslash( $_GET['tipo_negocio'] ) ) : '';
+$allowed_tipos = array( 'lancamentos', 'revendas' );
+$tipo_negocio = in_array( $tipo_negocio_raw, $allowed_tipos, true ) ? $tipo_negocio_raw : '';
 
 // Build WP_Query args
 $query_args = array(
@@ -21,14 +21,12 @@ $query_args = array(
     'paged'          => max( 1, get_query_var( 'paged' ) ),
 );
 
-if ( $finalidade ) {
-    $query_args['meta_query'] = array(
-        array(
-            'key'     => '_imovel_finalidade',
-            'value'   => $finalidade,
-            'compare' => '=',
-        ),
-    );
+if ( $tipo_negocio ) {
+    $query_args['tax_query'] = array(array(
+        'taxonomy' => 'tipo_negocio',
+        'field'    => 'slug',
+        'terms'    => $tipo_negocio,
+    ));
 }
 
 $imoveis_query = new WP_Query( $query_args );
@@ -54,14 +52,14 @@ $imoveis_query = new WP_Query( $query_args );
 
         <?php
         $filters = array(
-            ''        => 'Todos',
-            'Venda'   => 'Venda',
-            'Aluguel' => 'Aluguel',
+            ''             => 'Todos',
+            'lancamentos'  => 'Lançamentos',
+            'revendas'     => 'Revendas',
         );
 
         foreach ( $filters as $value => $label ) :
-            $is_active = ( $value === $finalidade );
-            $href      = $value ? esc_url( add_query_arg( 'finalidade', $value, get_post_type_archive_link( 'imovel' ) ) ) : esc_url( get_post_type_archive_link( 'imovel' ) );
+            $is_active = ( $value === $tipo_negocio );
+            $href      = $value ? esc_url( add_query_arg( 'tipo_negocio', $value, get_post_type_archive_link( 'imovel' ) ) ) : esc_url( get_post_type_archive_link( 'imovel' ) );
 
             $active_style = $is_active
                 ? 'background-color: var(--dourado); color: #fff; border-color: var(--dourado);'

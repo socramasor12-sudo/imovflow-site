@@ -4,7 +4,7 @@ description: Guia operacional completo do pipeline de publicação imobiliária 
 ---
 
 # SKILL.md — Marcos Rosa · Negócios Imobiliários
-> Pipeline V2.3 | Atualizado: 19/04/2026
+> Pipeline V2.1 | Atualizado: 20/04/2026
 
 ---
 
@@ -53,13 +53,13 @@ description: Guia operacional completo do pipeline de publicação imobiliária 
 12. **SSH post-quantum warning**: inofensivo, ignorar
 13. **Favicon**: usar `site_icon` do WP Customizer (attachment ID 331) — não função manual
 14. **Plugins perigosos**: W3 Total Cache (conflito LiteSpeed) e EWWW Image Optimizer (recompressão perde watermark) — DESATIVADOS permanentemente
-15. **Descrições de imóveis**: SEMPRE escritas por Marcos — NUNCA geradas por IA
-16. **Gemini para descrições**: DESCONTINUADA permanentemente (Gemini só para matching no CRM)
+15. **Descrições de imóveis**: Claude pode sugerir um rascunho da descrição a partir dos bullet points/texto bruto que Marcos fornecer. O rascunho é **sugestão** — Marcos revisa, ajusta e aprova antes de salvar no JSON. Nunca inventar características que não estejam no material enviado; se faltar algum dado relevante (área, banheiros, vagas, diferenciais), perguntar antes de escrever. Saída em HTML com `<p>` e, quando couber, `<ul><li>` para diferenciais.
+16. **Gemini API automática para descrições**: segue DESCONTINUADA (integração no `publicar.py` removida). Gemini só é usado para matching de leads no CRM. Sugestões de descrição vêm do Claude no chat, com revisão humana obrigatória.
 17. **WP-CLI indisponível**: PHP CLI = 5.x — usar scripts PHP fix via curl
 18. **Cache clearing**: `rm -rf ~/www/wp-content/cache/* ; rm -rf ~/www/wp-content/litespeed/*`
-19. **Cache LiteSpeed após publicar**: sempre validar em aba anônima (Ctrl+Shift+N). O `rm -rf ~/www/wp-content/cache/*` limpa page cache mas não invalida páginas HTML em memória servidas pro usuário com cookie de wp-admin. Se um imóvel recém-publicado parece estar sem dados (preço/quartos), testar em anônima ANTES de rodar fix manual.
-20. **PHP fix via SSH precisa usar shell=True + echo | base64 -d**: o padrão `ssh + python3 -c "import base64..."` com subprocess lista falha silenciosamente no Windows por quoting de argumentos. Usar sempre: `subprocess.run(f'ssh HOST "echo B64 | base64 -d > arquivo"', shell=True)`. Validar com `ls -la` após upload.
-21. **Finalidade no JSON deve ser capitalizada "Venda"**: posts antigos (Vivian, Flor do Cerrado) usam "Venda" (M); novo Setor Escala usou "venda" (m) e ficou inconsistente na UI. Padronizar sempre "Venda" ou "Aluguel" no campo finalidade.
+19. **Taxonomia `tipo_negocio`**: fonte de verdade para classificação lançamento/revenda. Slugs canônicos: `lancamentos` e `revendas` (plural). `publicar.py` atribui via REST API chamada adicional após criar o post. URLs públicas: `/lancamentos-em-anapolis/` e `/revendas-em-anapolis/` (páginas dedicadas com templates customizados). Archive `/imoveis/` usa filtro `?tipo_negocio=`.
+20. **`page.php`** deve existir no tema — sem ele, páginas do tipo `page` renderizam em branco (fallback para `index.php` que é `// Silence is golden`). Criado em 02/05/2026.
+21. **Nunca deletar `uploads/elementor/css/*`** — pode quebrar páginas que dependem de CSS gerado pelo Elementor.
 
 ---
 
@@ -106,6 +106,7 @@ Exemplos: `casa-flor-cerrado-370mil` · `apto-jundiai-280mil` · `terreno-jd-par
   "slug": "casa-flor-cerrado-370mil",
   "tipo": "casa",
   "finalidade": "venda",
+  "tipo_negocio": "revendas",
   "valor": 370000,
   "area": 105,
   "quartos": 3,
@@ -164,19 +165,30 @@ Alternativa (SCP falhar): `ssh imovflow@191.6.209.223 "python3 -c \"import base6
 - Lightbox em `single-imovel.php`: usa `<div>` + `background-image` (não `<img>`)
 - Plugins ativos: Akismet, Contact Form 7, JoinChat, Elementor, Insert Headers/Footers, Limit Login Attempts, LiteSpeed Cache, Regenerate Thumbnails, Yoast SEO
 - Plugins desativados: W3 Total Cache, EWWW Image Optimizer
+- Taxonomia `tipo_negocio` (`lancamentos` | `revendas`) — registrada em `functions.php`, exposta via REST API
 
-### Posts publicados (5 imóveis)
+### Posts publicados (11 imóveis)
 
-| Slug | Imóvel |
-|------|--------|
-| `casa-3-quartos-suite-summerville-anapolis-go` | Casa Summerville |
-| `casa-4-quartos-com-1-suite-no-frei-eustaquio-anapolis-go` | Casa Frei Eustáquio |
-| `casa-setor-sul-580mil` | Casa Setor Sul 3ª Etapa |
-| `casa-flor-do-cerrado-370mil` | Casa Flor do Cerrado |
-| `casa-vivian-parque-360mil` | Casa Vivian Parque |
-| `casa-escala-norte-350mil` | Casa Setor Escala (Região Norte) · post 479 |
+| Slug | Imóvel | Tipo Negócio |
+|------|--------|--------------|
+| `apto-arpoador-jundiai-711mil` | Apto Arpoador Jundiaí | lancamentos |
+| `lote-ecoville-colorado-360-450m2` | Lotes Ecoville Colorado | lancamentos |
+| `casa-3-quartos-suite-summerville-anapolis-go` | Casa Summerville | revendas |
+| `casa-4-quartos-com-1-suite-no-frei-eustaquio-anapolis-go` | Casa Frei Eustáquio | revendas |
+| `casa-setor-sul-580mil` | Casa Setor Sul 3ª Etapa | revendas |
+| `casa-flor-do-cerrado-370mil` | Casa Flor do Cerrado | revendas |
+| `casa-vivian-parque-360mil` | Casa Vivian Parque | revendas |
+| `casa-escala-norte-350mil` | Casa Escala Norte | revendas |
+| `lote-roses-garden-270mil` | Lote Roses Garden | revendas |
+| `casa-vila-formosa-360mil` | Casa Vila Formosa | revendas |
+| `casa-via-lagos-nova-crixas-550mil` | Casa Via dos Lagos | revendas |
 
-Apartamento Residencial Espanha (Jundiaí) também publicado.
+## SEO
+
+- Schema.org `RealEstateListing` em `single-imovel.php` (auto-gerado a partir de meta fields)
+- `BreadcrumbList` JSON-LD em `single-imovel.php`
+- Sitemap Yoast: `/sitemap_index.xml` (validar inclusão de CPT `imovel` e taxonomia `tipo_negocio`)
+- Title default home: "Corretor de Imóveis em Anápolis/GO | Marcos Rosa — CRECI-GO 35088-F"
 
 ---
 
@@ -274,23 +286,7 @@ Corretores parceiros enviam imóveis → Marcos publica → Leads chegam → CRM
 
 ---
 
-## 11. BACKLOG TECNICO
-
-Lista completa de bugs corrigidos e pendentes em:
-`C:\Users\socra\marcos-rosa-tema\BUGS.md`
-
-- 14 corrigidos (ambiente Windows, validacao, meta fields, logging)
-- 18 pendentes (6 medios, 11 menores, 1 estrutural)
-
-Nenhum bug critico em aberto no momento (19/04/2026).
-Consultar BUGS.md ao:
-- Mexer em area afetada (evita regressao)
-- Antes de primeira parceria real (bugs 18 e 30 viram prioridade)
-- Ao focar em SEO/GSC (bug 17)
-
----
-
-## 12. PENDÊNCIAS PRIORITÁRIAS
+## 11. PENDÊNCIAS PRIORITÁRIAS
 
 ### Agora (gera comissão)
 - Subir mais imóveis (meta: 10+)
@@ -309,7 +305,7 @@ Consultar BUGS.md ao:
 
 ---
 
-## 13. FERRAMENTAS
+## 12. FERRAMENTAS
 
 - **Claude Code** (extensão VS Code): operações SSH/SCP/Git
 - **MCPs ativos**: Gmail, Google Calendar, Google Search Console, GitHub, Canva, Google Drive
@@ -318,14 +314,91 @@ Consultar BUGS.md ao:
 
 ---
 
-## 14. PADRÃO DE RESPOSTA DA IA
+## 13. PADRÃO DE RESPOSTA DA IA
 
 - Fluxo: Objetivo → Código → Deploy → Validação
 - Sem plugins desnecessários
 - Sem `&&` em SSH
 - Sem declarar sucesso sem validar com `curl`/`ls`
 - Nunca modificar banco de dados sem backup
-- Descrições de imóveis: SEMPRE escritas por Marcos
+- Descrições de imóveis: Claude sugere rascunho → Marcos revisa e aprova → JSON final
+- Ao gerar rascunho, Claude NUNCA inventa características; se faltar dado relevante, pergunta antes
 - Explicações em linguagem clara
 - Respostas diretas e práticas (tempo limitado)
 - Para gerar JSON V5: Marcos manda texto livre → IA gera JSON flat → salva na pasta do imóvel
+
+---
+
+## SPRINT 1 — ROBUSTEZ DO PIPELINE (20/04/2026)
+
+Sprint 1 concluido. 3 melhorias estruturais:
+
+**1. Validacao Pydantic (`schema_imovel.py`)**
+- Novo arquivo: `C:\Users\socra\marcos-rosa-tema\schema_imovel.py`
+- Define modelo `Imovel` com tipos, ranges e enums
+- Converte V4 (nested, do formulario) para V5 (flat) via `normalizar_v4_para_v5()`
+- Mapa V4 real documentado:
+  - `informacoes_basicas.titulo` -> titulo
+  - `classificacao.tipo_principal` -> tipo
+  - `caracteristicas.area_total` ou `area_construida` -> area
+  - `descricao.breve` + `diferenciais` + `observacoes` -> descricao (HTML)
+  - `seo.titulo_seo` -> seo_title
+- Publicar fail fast: se invalido, imprime erros e aborta antes de upload
+
+**2. Guardrail em `iniciar_imovel.py`**
+- Checa 3 fontes antes de criar pasta:
+  1. `_publicados/<slug>/` existe? -> aborta
+  2. `_em-captacao/<slug>/` existe com JSON ou fotos? -> aborta
+  3. WordPress REST API ja tem o slug? -> aborta
+- Pasta vazia em `_em-captacao/` permite retomada (warn, nao err)
+- WP offline: warn, prossegue (nao acopla dependencia externa)
+
+**3. Logging persistente em `publicar.py`**
+- Cada execucao: `logs/publicar-<slug>-<timestamp>.log`
+- Suporta `--dry-run` (sufixo `-dryrun` no nome)
+- Tee duplica stdout/stderr (tela + arquivo)
+- `errors="replace"` no open (defesa encoding Windows)
+- `atexit` garante fechamento do file handle
+
+**Comportamentos estabelecidos (auditoria do dia):**
+
+- `_publicados/` = registro imutavel. Nunca editar JSONs la retroativamente.
+- Slug do argumento tem precedencia sobre slug do JSON. Divergencia = warn `[!]`.
+- JSONs V4 ja publicados sao imutaveis (regra C - nao reprocessar).
+
+**Dividas reconhecidas (pendentes):**
+
+- Sprint 2: atomicidade do `publicar.py` (sem rollback/manifest em caso de falha)
+- Fonte de verdade do slug e a pasta, nao o JSON (consciente, valido enquanto so Marcos opera)
+- Inventario V4 -> V5 incompleto (campos ignorados: `condicoes_pagamento`, `proprietario.*`, `captacao.corretor`, `suites`, `andar`, `observacoes`, `endereco`). Revisitar quando parceiros entrarem.
+- Credenciais WP em plaintext no `publicar.py` - migrar para .env antes de parceiros
+
+**Arquivos novos/modificados hoje:**
+
+- NOVO: `schema_imovel.py` (170 linhas, Pydantic + normalizador V4->V5)
+- MOD: `publicar.py` (carregar_json unificado, validar_dados via Pydantic, slug warn, logging unificado)
+- MOD: `iniciar_imovel.py` (guardrail 3 fontes)
+- MOD: `publicar.py` (watermark centralizado 25% / opacidade 55%)
+- Backups `.bak-20260419-*` preservados em `C:\Users\socra\marcos-rosa-tema\`
+
+---
+
+## PROBLEMAS RESOLVIDOS — ADICIONADOS 20/04/2026
+
+### P-10: Foto de perfil cortando topo da cabeca
+- **Causa**: `.sobre-foto img` com `object-fit: cover` + container 600px alto cortava
+  o topo da cabeca porque a foto original eh retrato alto
+- **Solucao**: trocar para `object-fit: contain` APENAS nas 2 regras da
+  `.sobre-foto` (linhas 220 e 231 do main.css). Cards de imoveis
+  (`.imovel-img img`, linhas 177 e 646) DEVEM continuar com `cover`
+- **NUNCA** fazer `sed global` de `cover` -> `contain` — quebra os cards
+- **Arquivos criticos**: `marcos-rosa-desktop.jpg` e `marcos-rosa-retina.jpg`
+  em `~/www/wp-content/themes/marcos-rosa/assets/img/`. Se sumirem, o
+  `front-page.php:84-85` referencia esses nomes exatos
+
+### P-11: Arquivos de imagem do tema sumindo sem explicacao
+- **Ocorrencia**: 20/04/2026, `marcos-rosa-desktop.jpg` e `-retina.jpg`
+  ausentes do servidor. Backups locais em `C:\Users\socra\Downloads\`
+  resolveram (datados de 03/04)
+- **Pendencia**: configurar backup automatico do `~/www/wp-content/themes/marcos-rosa/assets/img/`
+  (Sprint 3, antes de aceitar parceiros)

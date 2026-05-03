@@ -1,0 +1,24 @@
+{
+  "titulo": "",
+  "slug": "",
+  "tipo": "casa",
+  "finalidade": "venda",
+  "tipo_negocio": "revendas",
+  "valor": 0,
+  "area": 0,
+  "quartos": 0,
+  "banheiros": 0,
+  "vagas": 0,
+  "bairro": "",
+  "cidade": "Anápolis",
+  "estado": "GO",
+  "descricao": "",
+  "seo_title": "",
+  "seo_description": "",
+  "foto_capa": "",
+  "parceiro": {
+    "nome": "",
+    "creci": "",
+    "whatsapp": ""
+  }
+}

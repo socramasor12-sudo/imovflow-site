@@ -135,6 +135,24 @@ function marcos_rosa_cpt_imovel() {
 }
 add_action('init', 'marcos_rosa_cpt_imovel');
 
+// ─── TAXONOMIA: TIPO DE NEGÓCIO ─────────────────────────────
+function marcos_rosa_tax_tipo_negocio() {
+    register_taxonomy('tipo_negocio', 'imovel', [
+        'labels' => [
+            'name'          => 'Tipos de Negócio',
+            'singular_name' => 'Tipo de Negócio',
+            'add_new_item'  => 'Adicionar Tipo de Negócio',
+            'search_items'  => 'Buscar Tipo de Negócio',
+        ],
+        'hierarchical'      => false,
+        'public'            => true,
+        'show_in_rest'      => true,
+        'show_admin_column' => true,
+        'rewrite'           => ['slug' => 'tipo-negocio'],
+    ]);
+}
+add_action('init', 'marcos_rosa_tax_tipo_negocio');
+
 // ─── META BOX: IMOVEL ───────────────────────────────────────
 function marcos_rosa_imovel_meta_box_register() {
     add_meta_box(
